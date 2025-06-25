@@ -654,16 +654,15 @@
 
     <script>
         // Firebase Configuration - החלף עם הקונפיגורציה שלך!
-  const firebaseConfig = {
-    apiKey: "AIzaSyBZKyN8w32w1pn4hf28Fv9LecsTDgjZRTs",
-    authDomain: "my-login-system-d583d.firebaseapp.com",
-    databaseURL: "https://my-login-system-d583d-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "my-login-system-d583d",
-    storageBucket: "my-login-system-d583d.firebasestorage.app",
-    messagingSenderId: "873530338056",
-    appId: "1:873530338056:web:1d2911d1cb9a0000271abd",
-    measurementId: "G-W9EBGS5PQ5"
-  };
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com/",
+            projectId: "YOUR_PROJECT",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
 
         // Initialize Firebase
         let database;
@@ -802,15 +801,16 @@
         function sendMessageToFirebase(friendName, message) {
             if (!isFirebaseConnected || !database) return;
 
+            const messageId = Date.now() + '_' + Math.floor(Math.random() * 10000);
             const messageData = {
                 from: currentPlayer.username,
                 to: friendName,
                 text: message,
                 timestamp: Date.now(),
-                id: Date.now() + '_' + Math.random()
+                id: messageId
             };
 
-            database.ref(`chats/${messageData.id}`).set(messageData);
+            database.ref(`chats/${messageId}`).set(messageData);
         }
 
         function handleIncomingMessage(messageData) {
@@ -863,7 +863,7 @@
         function showCreateForm() {
             hideAllForms();
             document.getElementById('createForm').classList.add('active');
-        }
+        }        
 
         function hideAllForms() {
             document.getElementById('createForm').classList.remove('active');
@@ -1023,16 +1023,17 @@
 
         function sendFriendRequest(player) {
             if (isFirebaseConnected && database) {
-                // Send via Firebase
+                // Send via Firebase - use timestamp without dots
+                const requestId = Date.now() + '_' + Math.floor(Math.random() * 10000);
                 const requestData = {
                     from: currentPlayer.username,
                     to: player.username,
                     fromColor: currentPlayer.color,
                     timestamp: Date.now(),
-                    id: Date.now() + '_' + Math.random()
+                    id: requestId
                 };
                 
-                database.ref(`friendRequests/${requestData.id}`).set(requestData);
+                database.ref(`friendRequests/${requestId}`).set(requestData);
             }
             
             alert(`נשלחה בקשת חברות ל${player.username}`);
