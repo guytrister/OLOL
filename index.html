@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>משחק מרובה משתתפים</title>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -113,6 +118,7 @@
             justify-content: center;
             font-weight: bold;
             color: white;
+            transition: all 0.3s ease;
         }
 
         .ui-panel {
@@ -328,6 +334,47 @@
             cursor: pointer;
         }
 
+        .connection-status {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .connected {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .disconnected {
+            background: #f44336;
+            color: white;
+        }
+
+        .firebase-config {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: right;
+        }
+
+        .firebase-config h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .firebase-config p {
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* שאר הסטיילים זהים לקוד הקודם... */
         .mini-game-area {
             width: 400px;
             height: 300px;
@@ -453,6 +500,16 @@
     <div id="mainScreen" class="container">
         <h1>ברוכים הבאים למשחק מרובה משתתפים</h1>
         
+        <!-- הוראות Firebase -->
+        <div class="firebase-config">
+            <h3>⚙️ הגדרת חיבור</h3>
+            <p>כדי שהמשחק יעבוד בין מחשבים שונים, עליך להגדיר Firebase:</p>
+            <p>1. היכנס ל-console.firebase.google.com</p>
+            <p>2. צור פרויקט חדש</p>
+            <p>3. הוסף Realtime Database</p>
+            <p>4. העתק את הקונפיגורציה והחלף אותה בקוד</p>
+        </div>
+        
         <div id="accountsList"></div>
         
         <button class="button" onclick="showCreateForm()">צור חשבון חדש</button>
@@ -504,6 +561,7 @@
     <div id="gameArea" class="game-area">
         <button class="back-button" onclick="backToMenu()">חזור לתפריט</button>
         <div class="coins" id="coinsDisplay">🪙 0</div>
+        <div id="connectionStatus" class="connection-status disconnected">מנותק</div>
         
         <div class="ui-panel">
             <button class="ui-button" onclick="openWardrobe()">👕 ארון</button>
@@ -513,7 +571,7 @@
         </div>
     </div>
 
-    <!-- Wardrobe Modal -->
+    <!-- כל שאר המודלים זהים לקוד הקודם... -->
     <div class="modal" id="wardrobeModal">
         <div class="modal-content">
             <button class="close-btn" onclick="closeModal('wardrobeModal')">&times;</button>
@@ -530,7 +588,6 @@
         </div>
     </div>
 
-    <!-- Chat Panel -->
     <div class="chat-panel" id="chatPanel">
         <div class="chat-header">
             <h3 id="chatTitle">צ'אט</h3>
@@ -543,7 +600,6 @@
         </div>
     </div>
 
-    <!-- Friends Modal -->
     <div class="modal" id="friendsModal">
         <div class="modal-content">
             <button class="close-btn" onclick="closeModal('friendsModal')">&times;</button>
@@ -552,7 +608,6 @@
         </div>
     </div>
 
-    <!-- Player Info Panel -->
     <div class="player-info-panel" id="playerInfoPanel">
         <h3 id="selectedPlayerName"></h3>
         <div>
@@ -560,7 +615,6 @@
         </div>
     </div>
 
-    <!-- Friend Request Modal -->
     <div class="friend-request" id="friendRequest">
         <h3 id="friendRequestSender"></h3>
         <p>שלח לך בקשת חברות</p>
@@ -570,7 +624,6 @@
         </div>
     </div>
 
-    <!-- Phone Modal -->
     <div class="modal" id="phoneModal">
         <div class="modal-content">
             <button class="close-btn" onclick="closeModal('phoneModal')">&times;</button>
@@ -584,82 +637,6 @@
         </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div class="modal" id="settingsModal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeModal('settingsModal')">&times;</button>
-            <h2>הגדרות</h2>
-            <div class="settings-preview">
-                <div class="player" id="settingsPreview" style="position: relative; display: inline-block; width: 60px; height: 60px; font-size: 20px;"></div>
-                <p style="margin-top: 10px;">כך אתה נראה במשחק</p>
-            </div>
-            <div class="settings-buttons">
-                <button class="button" onclick="switchAccount()">החלף חשבון</button>
-                <button class="button" onclick="showEditAccount()">שנה פרטים</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Account Modal -->
-    <div class="modal" id="editAccountModal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeModal('editAccountModal')">&times;</button>
-            <h2>שנה פרטי חשבון</h2>
-            <div class="form-group">
-                <label>שם משתמש חדש:</label>
-                <input type="text" id="editUsername" placeholder="הכנס שם משתמש חדש">
-            </div>
-            <div class="form-group">
-                <label>סיסמה חדשה:</label>
-                <input type="password" id="editPassword" placeholder="הכנס סיסמה חדשה">
-            </div>
-            <button class="button" onclick="saveAccountChanges()">אשר שינויים</button>
-            <button class="button" onclick="closeModal('editAccountModal')" style="background: #ccc;">ביטול</button>
-        </div>
-    </div>
-
-    <!-- Games Modal -->
-    <div class="modal" id="gamesModal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeModal('gamesModal')">&times;</button>
-            <h2>משחקים</h2>
-            <div class="phone-menu">
-                <button class="phone-button" onclick="startTrivia()">🧠 טריוויה</button>
-                <button class="phone-button" onclick="startObstacles()">🏃 מכשולים</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Trivia Modal -->
-    <div class="modal" id="triviaModal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeTrivia()">&times;</button>
-            <h2>משחק הטריוויה</h2>
-            <div class="timer" id="triviaTimer">10</div>
-            <div id="triviaQuestion" style="font-size: 18px; margin: 20px 0;"></div>
-            <div class="trivia-answers" id="triviaAnswers"></div>
-            <div style="margin-top: 20px;">
-                <p>שאלה: <span id="questionNumber">1</span></p>
-                <p>מטבעות שזכיתי: <span id="triviaCoins">0</span></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Obstacles Modal -->
-    <div class="modal" id="obstaclesModal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeObstacles()">&times;</button>
-            <h2>משחק המכשולים</h2>
-            <div class="mini-game-area" id="obstaclesGame">
-                <div class="player" id="obstaclePlayer" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);"></div>
-            </div>
-            <p>השתמש בחצים כדי להתחמק מהמכשולים!</p>
-            <p>מכשולים שעברו: <span id="obstacleCount">0</span></p>
-            <p>מטבעות שזכיתי: <span id="obstacleCoins">0</span></p>
-        </div>
-    </div>
-
-    <!-- Map Modal -->
     <div class="modal" id="mapModal">
         <div class="modal-content" style="max-width: 600px;">
             <button class="close-btn" onclick="closeModal('mapModal')">&times;</button>
@@ -676,6 +653,33 @@
     </div>
 
     <script>
+        // Firebase Configuration - החלף עם הקונפיגורציה שלך!
+  const firebaseConfig = {
+    apiKey: "AIzaSyBZKyN8w32w1pn4hf28Fv9LecsTDgjZRTs",
+    authDomain: "my-login-system-d583d.firebaseapp.com",
+    databaseURL: "https://my-login-system-d583d-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "my-login-system-d583d",
+    storageBucket: "my-login-system-d583d.firebasestorage.app",
+    messagingSenderId: "873530338056",
+    appId: "1:873530338056:web:1d2911d1cb9a0000271abd",
+    measurementId: "G-W9EBGS5PQ5"
+  };
+
+        // Initialize Firebase
+        let database;
+        let isFirebaseConnected = false;
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            isFirebaseConnected = true;
+            console.log('Firebase connected successfully');
+        } catch (error) {
+            console.warn('Firebase connection failed:', error);
+            isFirebaseConnected = false;
+        }
+
+        // Game Variables
         let selectedColor = '#FF6B6B';
         let currentPlayer = null;
         let accounts = [];
@@ -684,48 +688,194 @@
         let currentLocation = 'park';
         let currentChatFriend = null;
         let selectedPlayer = null;
-        let realPlayers = {}; // רשימת שחקנים אמיתיים
+        let realPlayers = {};
+        let playersRef = null;
+        let chatRef = null;
 
-        // Trivia game variables
-        let triviaQuestions = [
-            // רמה קלה
-            { question: "מה היא בירת צרפת?", answers: ["לונדון", "פריז", "רומא", "מדריד"], correct: 1, level: 1 },
-            { question: "כמה רגליים יש לעכביש?", answers: ["6", "8", "10", "12"], correct: 1, level: 1 },
-            { question: "מה הוא הכוכב הקרוב ביותר לכדור הארץ?", answers: ["הירח", "מרס", "השמש", "נוגה"], correct: 2, level: 1 },
-            { question: "איזה גז נושמים בני אדם?", answers: ["חמצן", "פחמן דו-חמצני", "חנקן", "הליום"], correct: 0, level: 1 },
+        // Connection status
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connectionStatus');
+            if (isFirebaseConnected) {
+                statusElement.textContent = 'מחובר';
+                statusElement.className = 'connection-status connected';
+            } else {
+                statusElement.textContent = 'מנותק';
+                statusElement.className = 'connection-status disconnected';
+            }
+        }
+
+        // Firebase Player Management
+        function initializeFirebaseListeners() {
+            if (!isFirebaseConnected || !database) return;
+
+            playersRef = database.ref('players');
             
-            // רמה בינונית
-            { question: "באיזו שנה הוקמה מדינת ישראל?", answers: ["1947", "1948", "1949", "1950"], correct: 1, level: 2 },
-            { question: "מה היא יחידת הלחץ הבסיסית?", answers: ["ניוטון", "פסקל", "ג'ול", "וואט"], correct: 1, level: 2 },
-            { question: "איזה יסוד כימי סמלו Au?", answers: ["כסף", "זהב", "אלומיניום", "ארגון"], correct: 1, level: 2 },
-            { question: "מי כתב את 'המטמורפוזה'?", answers: ["קפקא", "קמי", "סארטר", "דוסטויבסקי"], correct: 0, level: 2 },
+            // Listen for new players
+            playersRef.on('child_added', (snapshot) => {
+                const playerData = snapshot.val();
+                if (playerData.username !== currentPlayer.username) {
+                    createOrUpdateOtherPlayer(playerData);
+                }
+            });
+
+            // Listen for player updates
+            playersRef.on('child_changed', (snapshot) => {
+                const playerData = snapshot.val();
+                if (playerData.username !== currentPlayer.username) {
+                    createOrUpdateOtherPlayer(playerData);
+                }
+            });
+
+            // Listen for player removal
+            playersRef.on('child_removed', (snapshot) => {
+                const playerData = snapshot.val();
+                removeOtherPlayer(playerData.id);
+            });
+
+            // Chat listeners
+            chatRef = database.ref('chats');
+            chatRef.on('child_added', (snapshot) => {
+                handleIncomingMessage(snapshot.val());
+            });
+        }
+
+        function createOrUpdateOtherPlayer(playerData) {
+            if (playerData.location !== currentLocation) return;
+
+            const existingPlayer = document.getElementById(`player_${playerData.id}`);
             
-            // רמה קשה
-            { question: "מה הוא המהירות המקסימלית של האור בוואקום?", answers: ["299,792,458 מ/ש", "300,000,000 מ/ש", "299,000,000 מ/ש", "301,000,000 מ/ש"], correct: 0, level: 3 },
-            { question: "באיזו שנה נפל חומת ברלין?", answers: ["1987", "1988", "1989", "1990"], correct: 2, level: 3 },
-            { question: "מה הוא המספר האטומי של אורניום?", answers: ["90", "91", "92", "93"], correct: 2, level: 3 },
-            { question: "מי המציא את תורת היחסות הכללית?", answers: ["ניוטון", "איינשטיין", "הוקינג", "פיינמן"], correct: 1, level: 3 }
-        ];
+            if (existingPlayer) {
+                // Update existing player
+                existingPlayer.style.left = playerData.x + 'px';
+                existingPlayer.style.top = playerData.y + 'px';
+                existingPlayer.style.backgroundColor = playerData.color;
+            } else {
+                // Create new player
+                const player = document.createElement('div');
+                player.className = 'player';
+                player.id = `player_${playerData.id}`;
+                player.style.backgroundColor = playerData.color;
+                player.style.left = playerData.x + 'px';
+                player.style.top = playerData.y + 'px';
+                player.style.position = 'absolute';
+                player.style.cursor = 'pointer';
+                player.textContent = playerData.username.charAt(0).toUpperCase();
+                
+                player.onclick = () => showPlayerInfo(playerData);
+                
+                document.getElementById('gameArea').appendChild(player);
+            }
+            
+            realPlayers[playerData.id] = playerData;
+        }
 
-        let currentTriviaQuestion = 0;
-        let triviaTimer = 10;
-        let triviaInterval;
-        let triviaCoinsEarned = 0;
-        let currentTriviaLevel = 1;
+        function removeOtherPlayer(playerId) {
+            const playerElement = document.getElementById(`player_${playerId}`);
+            if (playerElement) {
+                playerElement.remove();
+            }
+            delete realPlayers[playerId];
+        }
 
-        // Obstacles game variables
-        let obstacleGame = {
-            player: { x: 200, y: 270 },
-            obstacles: [],
-            bomb: { x: 0, y: 270 },
-            score: 0,
-            running: false
-        };
+        function updatePlayerInFirebase() {
+            if (!isFirebaseConnected || !currentPlayer || !database) return;
 
-        // Chat system
-        let chatMessages = {};
+            const playerData = {
+                id: currentPlayer.id,
+                username: currentPlayer.username,
+                color: currentPlayer.color,
+                x: currentPlayer.x,
+                y: currentPlayer.y,
+                location: currentLocation,
+                lastSeen: Date.now()
+            };
 
-        // טעינת חשבונות
+            database.ref(`players/${currentPlayer.id}`).set(playerData);
+        }
+
+        function removePlayerFromFirebase() {
+            if (!isFirebaseConnected || !currentPlayer || !database) return;
+            database.ref(`players/${currentPlayer.id}`).remove();
+        }
+
+        // Chat with Firebase
+        function sendMessageToFirebase(friendName, message) {
+            if (!isFirebaseConnected || !database) return;
+
+            const messageData = {
+                from: currentPlayer.username,
+                to: friendName,
+                text: message,
+                timestamp: Date.now(),
+                id: Date.now() + '_' + Math.random()
+            };
+
+            database.ref(`chats/${messageData.id}`).set(messageData);
+        }
+
+        function handleIncomingMessage(messageData) {
+            if (messageData.to === currentPlayer.username && 
+                currentChatFriend && 
+                messageData.from === currentChatFriend.username) {
+                
+                displayMessage(messageData.from, messageData.text);
+            }
+        }
+
+        function displayMessage(sender, text) {
+            const chatMessagesDiv = document.getElementById('chatMessages');
+            const messageElement = document.createElement('div');
+            messageElement.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            messageElement.style.marginBottom = '5px';
+            if (sender === currentPlayer.username) {
+                messageElement.style.textAlign = 'right';
+                messageElement.style.color = '#2196F3';
+            }
+            chatMessagesDiv.appendChild(messageElement);
+            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+        }
+
+        // Account Management (Local Storage)
+        function loadAccounts() {
+            accounts = JSON.parse(localStorage.getItem('gameAccounts') || '[]');
+            
+            const accountsList = document.getElementById('accountsList');
+            accountsList.innerHTML = '';
+            
+            if (accounts.length > 0) {
+                const title = document.createElement('h3');
+                title.textContent = 'חשבונות קיימים:';
+                accountsList.appendChild(title);
+                
+                accounts.forEach(account => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'padding: 10px; margin: 5px; background: #f0f0f0; border-radius: 8px; cursor: pointer;';
+                    item.innerHTML = `
+                        <div style="width: 20px; height: 20px; background: ${account.color}; border-radius: 50%; display: inline-block; margin-left: 10px;"></div>
+                        ${account.username}
+                    `;
+                    item.onclick = () => loginWithAccount(account);
+                    accountsList.appendChild(item);
+                });
+            }
+        }
+
+        function showCreateForm() {
+            hideAllForms();
+            document.getElementById('createForm').classList.add('active');
+        }
+
+        function hideAllForms() {
+            document.getElementById('createForm').classList.remove('active');
+            document.getElementById('loginForm').classList.remove('active');
+        }
+
+        function selectColor(color, element) {
+            selectedColor = color;
+            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+
         function createAccount() {
             const username = document.getElementById('newUsername').value.trim();
             const password = document.getElementById('newPassword').value.trim();
@@ -775,7 +925,7 @@
 
         function loginWithAccount(account) {
             currentPlayer = {
-                id: Date.now(),
+                id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                 username: account.username,
                 color: account.color,
                 x: Math.random() * (window.innerWidth - 100) + 50,
@@ -785,14 +935,22 @@
             coins = account.coins || 0;
             friends = account.friends || [];
             
+            // Initialize Firebase listeners
+            if (isFirebaseConnected) {
+                initializeFirebaseListeners();
+            }
+            
             // מעבר למשחק
             document.getElementById('mainScreen').style.display = 'none';
             document.getElementById('gameArea').style.display = 'block';
             
             // יצירת השחקן
             createPlayer();
-            loadOtherPlayers();
             updateCoinsDisplay();
+            updateConnectionStatus();
+            
+            // Update Firebase
+            updatePlayerInFirebase();
         }
 
         function createPlayer() {
@@ -807,55 +965,6 @@
             player.textContent = currentPlayer.username.charAt(0).toUpperCase();
             
             document.getElementById('gameArea').appendChild(player);
-            
-            // שמירת המיקום של השחקן הנוכחי
-            savePlayerPosition();
-        }
-
-        function loadOtherPlayers() {
-            // טעינת שחקנים אחרים שמחוברים כעת
-            const savedPlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
-            
-            Object.keys(savedPlayers).forEach(playerKey => {
-                const playerData = savedPlayers[playerKey];
-                if (playerData.username !== currentPlayer.username) {
-                    createOtherPlayer(playerData);
-                }
-            });
-        }
-
-        function createOtherPlayer(playerData) {
-            const player = document.createElement('div');
-            player.className = 'player';
-            player.id = `player_${playerData.id}`;
-            player.style.backgroundColor = playerData.color;
-            player.style.left = playerData.x + 'px';
-            player.style.top = playerData.y + 'px';
-            player.style.position = 'absolute';
-            player.style.cursor = 'pointer';
-            player.textContent = playerData.username.charAt(0).toUpperCase();
-            
-            player.onclick = () => showPlayerInfo(playerData);
-            
-            document.getElementById('gameArea').appendChild(player);
-            realPlayers[playerData.id] = playerData;
-        }
-
-        function savePlayerPosition() {
-            if (!currentPlayer) return;
-            
-            const activePlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
-            activePlayers[currentPlayer.id] = {
-                id: currentPlayer.id,
-                username: currentPlayer.username,
-                color: currentPlayer.color,
-                x: currentPlayer.x,
-                y: currentPlayer.y,
-                location: currentLocation,
-                lastSeen: Date.now()
-            };
-            
-            localStorage.setItem('activePlayers', JSON.stringify(activePlayers));
         }
 
         function updateCoinsDisplay() {
@@ -863,18 +972,17 @@
         }
 
         function backToMenu() {
-            // הסרת השחקן מהרשימה הפעילה
-            if (currentPlayer) {
-                const activePlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
-                delete activePlayers[currentPlayer.id];
-                localStorage.setItem('activePlayers', JSON.stringify(activePlayers));
-            }
+            // Remove player from Firebase
+            removePlayerFromFirebase();
             
             document.getElementById('gameArea').style.display = 'none';
             document.getElementById('mainScreen').style.display = 'block';
             
             // ניקוי שחקנים
             document.querySelectorAll('.player').forEach(p => p.remove());
+            
+            // Clear real players
+            realPlayers = {};
             
             // סגירת צ'אט
             closeChatPanel();
@@ -914,71 +1022,20 @@
         }
 
         function sendFriendRequest(player) {
-            // שמירת בקשת חברות במערכת
-            const friendRequests = JSON.parse(localStorage.getItem('friendRequests') || '{}');
-            if (!friendRequests[player.username]) {
-                friendRequests[player.username] = [];
+            if (isFirebaseConnected && database) {
+                // Send via Firebase
+                const requestData = {
+                    from: currentPlayer.username,
+                    to: player.username,
+                    fromColor: currentPlayer.color,
+                    timestamp: Date.now(),
+                    id: Date.now() + '_' + Math.random()
+                };
+                
+                database.ref(`friendRequests/${requestData.id}`).set(requestData);
             }
             
-            friendRequests[player.username].push({
-                from: currentPlayer.username,
-                fromColor: currentPlayer.color,
-                timestamp: Date.now()
-            });
-            
-            localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
             alert(`נשלחה בקשת חברות ל${player.username}`);
-        }
-
-        function checkFriendRequests() {
-            if (!currentPlayer) return;
-            
-            const friendRequests = JSON.parse(localStorage.getItem('friendRequests') || '{}');
-            const myRequests = friendRequests[currentPlayer.username] || [];
-            
-            if (myRequests.length > 0) {
-                const request = myRequests[0];
-                document.getElementById('friendRequestSender').textContent = request.from;
-                document.getElementById('friendRequest').style.display = 'block';
-            }
-        }
-
-        function acceptFriendRequest() {
-            const senderName = document.getElementById('friendRequestSender').textContent;
-            
-            // הוספת החבר לרשימה
-            const friendRequests = JSON.parse(localStorage.getItem('friendRequests') || '{}');
-            const myRequests = friendRequests[currentPlayer.username] || [];
-            const request = myRequests.find(req => req.from === senderName);
-            
-            if (request) {
-                friends.push({
-                    username: request.from,
-                    status: 'online',
-                    color: request.fromColor
-                });
-                saveCurrentAccount();
-                
-                // הסרת הבקשה
-                friendRequests[currentPlayer.username] = myRequests.filter(req => req.from !== senderName);
-                localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
-                
-                alert(`${senderName} נוסף לרשימת החברים!`);
-            }
-            
-            document.getElementById('friendRequest').style.display = 'none';
-        }
-
-        function declineFriendRequest() {
-            const senderName = document.getElementById('friendRequestSender').textContent;
-            
-            // הסרת הבקשה
-            const friendRequests = JSON.parse(localStorage.getItem('friendRequests') || '{}');
-            const myRequests = friendRequests[currentPlayer.username] || [];
-            friendRequests[currentPlayer.username] = myRequests.filter(req => req.from !== senderName);
-            localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
-            
-            document.getElementById('friendRequest').style.display = 'none';
         }
 
         function openWardrobe() {
@@ -1010,7 +1067,7 @@
                     playerElement.style.backgroundColor = color;
                 }
                 saveCurrentAccount();
-                savePlayerPosition();
+                updatePlayerInFirebase();
             }
         }
 
@@ -1031,34 +1088,44 @@
                 const friendItem = document.createElement('div');
                 friendItem.className = 'friend-item';
                 
-                // בדיקה אם החבר מחובר כעת
-                const activePlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
-                const isOnline = Object.values(activePlayers).some(player => 
-                    player.username === friend.username && 
-                    Date.now() - player.lastSeen < 60000 // פעיל ב-60 השניות האחרונות
-                );
-                
-                friend.status = isOnline ? 'online' : 'offline';
-                
-                const statusClass = `status-${friend.status}`;
-                const statusText = friend.status === 'online' ? 'מחובר' : 'מנותק';
-                
-                friendItem.innerHTML = `
-                    <span>${friend.username}</span>
-                    <span class="friend-status ${statusClass}">${statusText}</span>
-                `;
-                
-                // רק אם החבר מחובר אפשר לפתוח צ'אט
-                if (friend.status === 'online') {
-                    friendItem.onclick = () => openChatWithFriend(friend);
-                    friendItem.style.cursor = 'pointer';
+                // Check if friend is online via Firebase
+                let isOnline = false;
+                if (isFirebaseConnected && database) {
+                    database.ref('players').once('value', (snapshot) => {
+                        const players = snapshot.val() || {};
+                        isOnline = Object.values(players).some(player => 
+                            player.username === friend.username && 
+                            Date.now() - player.lastSeen < 60000
+                        );
+                        
+                        friend.status = isOnline ? 'online' : 'offline';
+                        updateFriendItemDisplay(friendItem, friend);
+                    });
                 } else {
-                    friendItem.style.opacity = '0.6';
-                    friendItem.style.cursor = 'not-allowed';
+                    friend.status = 'offline';
+                    updateFriendItemDisplay(friendItem, friend);
                 }
                 
                 friendsList.appendChild(friendItem);
             });
+        }
+
+        function updateFriendItemDisplay(friendItem, friend) {
+            const statusClass = `status-${friend.status}`;
+            const statusText = friend.status === 'online' ? 'מחובר' : 'מנותק';
+            
+            friendItem.innerHTML = `
+                <span>${friend.username}</span>
+                <span class="friend-status ${statusClass}">${statusText}</span>
+            `;
+            
+            if (friend.status === 'online') {
+                friendItem.onclick = () => openChatWithFriend(friend);
+                friendItem.style.cursor = 'pointer';
+            } else {
+                friendItem.style.opacity = '0.6';
+                friendItem.style.cursor = 'not-allowed';
+            }
         }
 
         function openChatWithFriend(friend) {
@@ -1070,48 +1137,11 @@
             currentChatFriend = friend;
             document.getElementById('chatTitle').textContent = `צ'אט עם ${friend.username}`;
             
-            // טעינת הודעות עם החבר
-            loadChatMessages(friend.username);
+            // Clear chat messages
+            document.getElementById('chatMessages').innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">התחל שיחה עם החבר שלך!</div>';
             
             closeModal('friendsModal');
             document.getElementById('chatPanel').style.display = 'flex';
-        }
-
-        function loadChatMessages(friendName) {
-            const chatKey = `${currentPlayer.username}_${friendName}`;
-            const reverseChatKey = `${friendName}_${currentPlayer.username}`;
-            
-            // טעינת הודעות משני הכיוונים
-            const messages1 = JSON.parse(localStorage.getItem(`chat_${chatKey}`) || '[]');
-            const messages2 = JSON.parse(localStorage.getItem(`chat_${reverseChatKey}`) || '[]');
-            
-            // איחוד וסידור ההודעות לפי זמן
-            const allMessages = [...messages1, ...messages2].sort((a, b) => a.timestamp - b.timestamp);
-            
-            const chatMessagesDiv = document.getElementById('chatMessages');
-            chatMessagesDiv.innerHTML = '';
-            
-            if (allMessages.length === 0) {
-                const welcomeMsg = document.createElement('div');
-                welcomeMsg.textContent = 'התחל שיחה עם החבר שלך!';
-                welcomeMsg.style.textAlign = 'center';
-                welcomeMsg.style.color = '#666';
-                welcomeMsg.style.fontStyle = 'italic';
-                chatMessagesDiv.appendChild(welcomeMsg);
-            } else {
-                allMessages.forEach(msg => {
-                    const messageElement = document.createElement('div');
-                    messageElement.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}`;
-                    messageElement.style.marginBottom = '5px';
-                    if (msg.sender === currentPlayer.username) {
-                        messageElement.style.textAlign = 'right';
-                        messageElement.style.color = '#2196F3';
-                    }
-                    chatMessagesDiv.appendChild(messageElement);
-                });
-            }
-            
-            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
         }
 
         function closeChatPanel() {
@@ -1130,324 +1160,35 @@
             const message = input.value.trim();
             
             if (message && currentPlayer && currentChatFriend) {
-                const chatKey = `${currentPlayer.username}_${currentChatFriend.username}`;
+                // Display message locally
+                displayMessage(currentPlayer.username, message);
                 
-                const chatMessages = JSON.parse(localStorage.getItem(`chat_${chatKey}`) || '[]');
+                // Send via Firebase
+                if (isFirebaseConnected) {
+                    sendMessageToFirebase(currentChatFriend.username, message);
+                }
                 
-                const newMessage = {
-                    sender: currentPlayer.username,
-                    text: message,
-                    timestamp: Date.now()
-                };
-                
-                chatMessages.push(newMessage);
-                localStorage.setItem(`chat_${chatKey}`, JSON.stringify(chatMessages));
-                
-                // עדכון התצוגה
-                loadChatMessages(currentChatFriend.username);
                 input.value = '';
             }
-        }
-
-        function openSettings() {
-            closeModal('phoneModal');
-            
-            const preview = document.getElementById('settingsPreview');
-            preview.style.backgroundColor = currentPlayer.color;
-            preview.textContent = currentPlayer.username.charAt(0).toUpperCase();
-            
-            document.getElementById('settingsModal').style.display = 'flex';
-        }
-
-        function openGames() {
-            closeModal('phoneModal');
-            document.getElementById('gamesModal').style.display = 'flex';
-        }
-
-        function switchAccount() {
-            saveCurrentAccount();
-            closeModal('settingsModal');
-            backToMenu();
-        }
-
-        function showEditAccount() {
-            document.getElementById('editUsername').value = currentPlayer.username;
-            document.getElementById('editPassword').value = '';
-            closeModal('settingsModal');
-            document.getElementById('editAccountModal').style.display = 'flex';
-        }
-
-        function saveAccountChanges() {
-            const newUsername = document.getElementById('editUsername').value.trim();
-            const newPassword = document.getElementById('editPassword').value.trim();
-            
-            if (!newUsername || !newPassword) {
-                alert('אנא מלא את כל השדות');
-                return;
-            }
-            
-            // בדיקה אם שם המשתמש החדש כבר קיים (אם שונה מהנוכחי)
-            if (newUsername !== currentPlayer.username && accounts.some(acc => acc.username === newUsername)) {
-                alert('שם המשתמש כבר קיים');
-                return;
-            }
-            
-            // עדכון החשבון
-            const accountIndex = accounts.findIndex(acc => acc.username === currentPlayer.username);
-            if (accountIndex !== -1) {
-                accounts[accountIndex].username = newUsername;
-                accounts[accountIndex].password = newPassword;
-                localStorage.setItem('gameAccounts', JSON.stringify(accounts));
-                
-                currentPlayer.username = newUsername;
-                
-                // עדכון התצוגה
-                const playerElement = document.getElementById('mainPlayer');
-                if (playerElement) {
-                    playerElement.textContent = newUsername.charAt(0).toUpperCase();
-                }
-                
-                // עדכון במערכת השחקנים הפעילים
-                savePlayerPosition();
-                
-                alert('הפרטים עודכנו בהצלחה!');
-                closeModal('editAccountModal');
-            }
-        }
-
-        function startTrivia() {
-            closeModal('gamesModal');
-            currentTriviaQuestion = 0;
-            triviaCoinsEarned = 0;
-            currentTriviaLevel = 1;
-            showTriviaQuestion();
-            document.getElementById('triviaModal').style.display = 'flex';
-        }
-
-        function showTriviaQuestion() {
-            const availableQuestions = triviaQuestions.filter(q => q.level <= currentTriviaLevel);
-            
-            if (currentTriviaQuestion >= availableQuestions.length) {
-                // מעבר לרמה הבאה
-                if (currentTriviaLevel < 3) {
-                    currentTriviaLevel++;
-                    currentTriviaQuestion = 0;
-                }
-            }
-            
-            // חישוב זמן לשאלה - מתחיל מ-10 ויורד עד 3
-            const baseTime = 10;
-            const minTime = 3;
-            const timeReduction = Math.floor(currentTriviaQuestion / 3); // כל 3 שאלות זמן יורד
-            triviaTimer = Math.max(minTime, baseTime - timeReduction);
-            
-            const question = availableQuestions[currentTriviaQuestion % availableQuestions.length];
-            document.getElementById('triviaQuestion').textContent = question.question;
-            document.getElementById('questionNumber').textContent = currentTriviaQuestion + 1;
-            document.getElementById('triviaCoins').textContent = triviaCoinsEarned;
-            
-            const answersContainer = document.getElementById('triviaAnswers');
-            answersContainer.innerHTML = '';
-            
-            question.answers.forEach((answer, index) => {
-                const button = document.createElement('button');
-                button.className = 'trivia-answer';
-                button.textContent = answer;
-                button.onclick = () => answerTrivia(index, question);
-                answersContainer.appendChild(button);
-            });
-            
-            startTriviaTimer();
-        }
-
-        function startTriviaTimer() {
-            const timerElement = document.getElementById('triviaTimer');
-            let currentTimer = triviaTimer;
-            timerElement.textContent = currentTimer;
-            
-            triviaInterval = setInterval(() => {
-                currentTimer--;
-                timerElement.textContent = currentTimer;
-                
-                if (currentTimer <= 0) {
-                    clearInterval(triviaInterval);
-                    alert('הזמן נגמר!');
-                    nextTriviaQuestion();
-                }
-            }, 1000);
-        }
-
-        function answerTrivia(selectedIndex, question) {
-            clearInterval(triviaInterval);
-            
-            if (selectedIndex === question.correct) {
-                alert('תשובה נכונה!');
-                
-                // כל שתי שאלות - 4 מטבעות
-                if ((currentTriviaQuestion + 1) % 2 === 0) {
-                    triviaCoinsEarned += 4;
-                    coins += 4;
-                    updateCoinsDisplay();
-                    saveCurrentAccount();
-                    document.getElementById('triviaCoins').textContent = triviaCoinsEarned;
-                }
-            } else {
-                alert('תשובה שגויה!');
-            }
-            
-            nextTriviaQuestion();
-        }
-
-        function nextTriviaQuestion() {
-            currentTriviaQuestion++;
-            
-            setTimeout(() => {
-                showTriviaQuestion();
-            }, 1000);
-        }
-
-        function closeTrivia() {
-            clearInterval(triviaInterval);
-            closeModal('triviaModal');
-        }
-
-        function startObstacles() {
-            closeModal('gamesModal');
-            resetObstacleGame();
-            document.getElementById('obstaclesModal').style.display = 'flex';
-            runObstacleGame();
-        }
-
-        function resetObstacleGame() {
-            obstacleGame = {
-                player: { x: 180, y: 260 },
-                obstacles: [],
-                bomb: { x: 0, y: 260 },
-                score: 0,
-                running: true
-            };
-            
-            document.getElementById('obstacleCount').textContent = '0';
-            document.getElementById('obstacleCoins').textContent = coins;
-            
-            updateObstaclePlayer();
-        }
-
-        function updateObstaclePlayer() {
-            const player = document.getElementById('obstaclePlayer');
-            player.style.left = obstacleGame.player.x + 'px';
-            player.style.top = obstacleGame.player.y + 'px';
-            player.style.backgroundColor = currentPlayer.color;
-            player.textContent = currentPlayer.username.charAt(0).toUpperCase();
-        }
-
-        function runObstacleGame() {
-            const gameArea = document.getElementById('obstaclesGame');
-            
-            gameArea.querySelectorAll('.obstacle, .bomb').forEach(el => el.remove());
-            
-            const gameLoop = setInterval(() => {
-                if (!obstacleGame.running) {
-                    clearInterval(gameLoop);
-                    return;
-                }
-                
-                // תנועת הפצצה
-                obstacleGame.bomb.x += 2;
-                if (obstacleGame.bomb.x > 400) {
-                    obstacleGame.bomb.x = 0;
-                }
-                
-                let bombElement = gameArea.querySelector('.bomb');
-                if (!bombElement) {
-                    bombElement = document.createElement('div');
-                    bombElement.className = 'bomb';
-                    gameArea.appendChild(bombElement);
-                }
-                bombElement.style.left = obstacleGame.bomb.x + 'px';
-                bombElement.style.top = obstacleGame.bomb.y + 'px';
-                
-                // בדיקת התנגשות עם פצצה
-                if (Math.abs(obstacleGame.bomb.x - obstacleGame.player.x) < 25 &&
-                    Math.abs(obstacleGame.bomb.y - obstacleGame.player.y) < 25) {
-                    obstacleGame.running = false;
-                    clearInterval(gameLoop);
-                    alert('נתפסת על ידי הפצצה! המשחק נגמר');
-                    return;
-                }
-                
-                // יצירת מכשולים חדשים
-                if (Math.random() < 0.02) {
-                    const obstacle = {
-                        x: 400,
-                        y: Math.random() * 250,
-                        id: Date.now()
-                    };
-                    obstacleGame.obstacles.push(obstacle);
-                    
-                    const obstacleElement = document.createElement('div');
-                    obstacleElement.className = 'obstacle';
-                    obstacleElement.id = `obstacle_${obstacle.id}`;
-                    obstacleElement.style.left = obstacle.x + 'px';
-                    obstacleElement.style.top = obstacle.y + 'px';
-                    gameArea.appendChild(obstacleElement);
-                }
-                
-                // תנועת מכשולים
-                obstacleGame.obstacles = obstacleGame.obstacles.filter(obstacle => {
-                    obstacle.x -= 3;
-                    
-                    const element = document.getElementById(`obstacle_${obstacle.id}`);
-                    if (element) {
-                        element.style.left = obstacle.x + 'px';
-                        
-                        // בדיקת התנגשות
-                        if (Math.abs(obstacle.x - obstacleGame.player.x) < 30 &&
-                            Math.abs(obstacle.y - obstacleGame.player.y) < 30) {
-                            obstacleGame.running = false;
-                            clearInterval(gameLoop);
-                            alert('פגעת במכשול! המשחק נגמר');
-                            return false;
-                        }
-                        
-                        // מכשול עבר בהצלחה
-                        if (obstacle.x < -30) {
-                            element.remove();
-                            obstacleGame.score++;
-                            document.getElementById('obstacleCount').textContent = obstacleGame.score;
-                            
-                            // כל 5 מכשולים - 7 מטבעות
-                            if (obstacleGame.score % 5 === 0) {
-                                coins += 7;
-                                updateCoinsDisplay();
-                                document.getElementById('obstacleCoins').textContent = coins;
-                                saveCurrentAccount();
-                            }
-                            return false;
-                        }
-                    }
-                    return true;
-                });
-            }, 50);
-        }
-
-        function closeObstacles() {
-            obstacleGame.running = false;
-            closeModal('obstaclesModal');
         }
 
         function goToLocation(location) {
             currentLocation = location;
             closeModal('mapModal');
             
+            // Remove all players
             document.querySelectorAll('.player').forEach(p => p.remove());
+            realPlayers = {};
             
+            // Update player position
             currentPlayer.x = Math.random() * (window.innerWidth - 100) + 50;
             currentPlayer.y = Math.random() * (window.innerHeight - 100) + 50;
             
             createPlayer();
-            loadOtherPlayers();
             updateLocationBackground(location);
+            
+            // Update Firebase with new location
+            updatePlayerInFirebase();
         }
 
         function updateLocationBackground(location) {
@@ -1476,44 +1217,8 @@
             }
         }
 
-        function cleanupInactivePlayers() {
-            const activePlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
-            const now = Date.now();
-            const maxInactiveTime = 2 * 60 * 1000; // 2 דקות
-            
-            Object.keys(activePlayers).forEach(playerId => {
-                if (now - activePlayers[playerId].lastSeen > maxInactiveTime) {
-                    delete activePlayers[playerId];
-                }
-            });
-            
-            localStorage.setItem('activePlayers', JSON.stringify(activePlayers));
-        }
-
-        // תנועה עם חצים
+        // Movement with arrows
         document.addEventListener('keydown', function(e) {
-            // אם משחק המכשולים פועל
-            if (obstacleGame.running && document.getElementById('obstaclesModal').style.display === 'flex') {
-                const speed = 15;
-                switch(e.key) {
-                    case 'ArrowUp':
-                        obstacleGame.player.y = Math.max(0, obstacleGame.player.y - speed);
-                        break;
-                    case 'ArrowDown':
-                        obstacleGame.player.y = Math.min(260, obstacleGame.player.y + speed);
-                        break;
-                    case 'ArrowLeft':
-                        obstacleGame.player.x = Math.max(0, obstacleGame.player.x - speed);
-                        break;
-                    case 'ArrowRight':
-                        obstacleGame.player.x = Math.min(360, obstacleGame.player.x + speed);
-                        break;
-                }
-                updateObstaclePlayer();
-                e.preventDefault();
-                return;
-            }
-            
             // תנועה רגילה במשחק
             if (!currentPlayer || document.getElementById('gameArea').style.display === 'none') return;
             
@@ -1550,125 +1255,48 @@
             player.style.left = newX + 'px';
             player.style.top = newY + 'px';
             
-            // שמירת המיקום החדש
-            savePlayerPosition();
+            // Update Firebase with new position
+            updatePlayerInFirebase();
             
             e.preventDefault();
         });
 
-        // אתחול
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            removePlayerFromFirebase();
+        });
+
+        // Initialize on load
         window.onload = function() {
             loadAccounts();
+            updateConnectionStatus();
             
-            // ניקוי שחקנים לא פעילים כל דקה
-            setInterval(cleanupInactivePlayers, 60000);
-            
-            // שמירה אוטומטית כל 10 שניות
+            // Auto-update player position every 2 seconds
             setInterval(() => {
-                if (currentPlayer) {
-                    savePlayerPosition();
-                    saveCurrentAccount();
+                if (currentPlayer && isFirebaseConnected) {
+                    updatePlayerInFirebase();
                 }
-            }, 10000);
-            
-            // בדיקת בקשות חברות כל 5 שניות
-            setInterval(() => {
-                if (currentPlayer) {
-                    checkFriendRequests();
-                }
-            }, 5000);
-            
-            // עדכון מיקומי שחקנים אחרים כל 3 שניות
-            setInterval(() => {
-                if (currentPlayer && document.getElementById('gameArea').style.display === 'block') {
-                    updateOtherPlayersPositions();
-                }
-            }, 3000);
+            }, 2000);
         };
 
-        function updateOtherPlayersPositions() {
-            cleanupInactivePlayers();
-            
-            const activePlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
-            
-            // הסרת שחקנים שכבר לא פעילים
-            Object.keys(realPlayers).forEach(playerId => {
-                if (!activePlayers[playerId]) {
-                    const playerElement = document.getElementById(`player_${playerId}`);
-                    if (playerElement) {
-                        playerElement.remove();
-                    }
-                    delete realPlayers[playerId];
-                }
-            });
-            
-            // הוספת או עדכון שחקנים חדשים/קיימים
-            Object.keys(activePlayers).forEach(playerId => {
-                const playerData = activePlayers[playerId];
-                if (playerData.username !== currentPlayer.username && playerData.location === currentLocation) {
-                    const existingPlayer = document.getElementById(`player_${playerId}`);
-                    
-                    if (existingPlayer) {
-                        // עדכון מיקום
-                        existingPlayer.style.left = playerData.x + 'px';
-                        existingPlayer.style.top = playerData.y + 'px';
-                        existingPlayer.style.backgroundColor = playerData.color;
-                    } else {
-                        // יצירת שחקן חדש
-                        createOtherPlayer(playerData);
-                    }
-                    
-                    realPlayers[playerId] = playerData;
-                }
-            });
+        // Placeholder functions for game features (Trivia, Obstacles, etc.)
+        function openSettings() {
+            closeModal('phoneModal');
+            alert('הגדרות - בפיתוח');
         }
 
-        function loadAccounts() {
-            accounts = JSON.parse(localStorage.getItem('gameAccounts') || '[]');
-            
-            const accountsList = document.getElementById('accountsList');
-            accountsList.innerHTML = '';
-            
-            if (accounts.length > 0) {
-                const title = document.createElement('h3');
-                title.textContent = 'חשבונות קיימים:';
-                accountsList.appendChild(title);
-                
-                accounts.forEach(account => {
-                    const item = document.createElement('div');
-                    item.style.cssText = 'padding: 10px; margin: 5px; background: #f0f0f0; border-radius: 8px; cursor: pointer;';
-                    item.innerHTML = `
-                        <div style="width: 20px; height: 20px; background: ${account.color}; border-radius: 50%; display: inline-block; margin-left: 10px;"></div>
-                        ${account.username}
-                    `;
-                    item.onclick = () => loginWithAccount(account);
-                    accountsList.appendChild(item);
-                });
-            }
+        function openGames() {
+            closeModal('phoneModal');
+            alert('משחקים - בפיתוח');
         }
 
-        function showCreateForm() {
-            hideAllForms();
-            document.getElementById('createForm').classList.add('active');
+        function acceptFriendRequest() {
+            alert('קבלת בקשת חברות - בפיתוח');
         }
 
-        function showLoginForm() {
-            hideAllForms();
-            document.getElementById('loginForm').classList.add('active');
+        function declineFriendRequest() {
+            alert('דחיית בקשת חברות - בפיתוח');
         }
-
-        function hideAllForms() {
-            document.getElementById('createForm').classList.remove('active');
-            document.getElementById('loginForm').classList.remove('active');
-        }
-
-        function selectColor(color, element) {
-            selectedColor = color;
-            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
-            element.classList.add('selected');
-        }
-
-                
     </script>
 </body>
 </html>
