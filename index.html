@@ -393,6 +393,59 @@
             justify-content: center;
             margin-top: 20px;
         }
+
+        .player-info-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            border: 3px solid #2196F3;
+            text-align: center;
+            z-index: 2001;
+            display: none;
+        }
+
+        .friend-request {
+            position: fixed;
+            top: 50%;
+            right: 50%;
+            transform: translate(50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            border: 3px solid #4CAF50;
+            text-align: center;
+            z-index: 2001;
+            display: none;
+        }
+
+        .friend-request-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .accept-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .decline-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -496,6 +549,24 @@
             <button class="close-btn" onclick="closeModal('friendsModal')">&times;</button>
             <h2>החברים שלי</h2>
             <div class="friends-list" id="friendsList"></div>
+        </div>
+    </div>
+
+    <!-- Player Info Panel -->
+    <div class="player-info-panel" id="playerInfoPanel">
+        <h3 id="selectedPlayerName"></h3>
+        <div>
+            <button class="button" id="friendActionBtn" onclick="handleFriendAction()">שלח בקשת חברות</button>
+        </div>
+    </div>
+
+    <!-- Friend Request Modal -->
+    <div class="friend-request" id="friendRequest">
+        <h3 id="friendRequestSender"></h3>
+        <p>שלח לך בקשת חברות</p>
+        <div class="friend-request-buttons">
+            <button class="accept-btn" onclick="acceptFriendRequest()">אשר</button>
+            <button class="decline-btn" onclick="declineFriendRequest()">דחה</button>
         </div>
     </div>
 
@@ -612,6 +683,8 @@
         let coins = 0;
         let currentLocation = 'park';
         let currentChatFriend = null;
+        let selectedPlayer = null;
+        let realPlayers = {}; // רשימת שחקנים אמיתיים
 
         // Trivia game variables
         let triviaQuestions = [
@@ -653,51 +726,6 @@
         let chatMessages = {};
 
         // טעינת חשבונות
-        function loadAccounts() {
-            accounts = JSON.parse(localStorage.getItem('gameAccounts') || '[]');
-            
-            const accountsList = document.getElementById('accountsList');
-            accountsList.innerHTML = '';
-            
-            if (accounts.length > 0) {
-                const title = document.createElement('h3');
-                title.textContent = 'חשבונות קיימים:';
-                accountsList.appendChild(title);
-                
-                accounts.forEach(account => {
-                    const item = document.createElement('div');
-                    item.style.cssText = 'padding: 10px; margin: 5px; background: #f0f0f0; border-radius: 8px; cursor: pointer;';
-                    item.innerHTML = `
-                        <div style="width: 20px; height: 20px; background: ${account.color}; border-radius: 50%; display: inline-block; margin-left: 10px;"></div>
-                        ${account.username}
-                    `;
-                    item.onclick = () => loginWithAccount(account);
-                    accountsList.appendChild(item);
-                });
-            }
-        }
-
-        function showCreateForm() {
-            hideAllForms();
-            document.getElementById('createForm').classList.add('active');
-        }
-
-        function showLoginForm() {
-            hideAllForms();
-            document.getElementById('loginForm').classList.add('active');
-        }
-
-        function hideAllForms() {
-            document.getElementById('createForm').classList.remove('active');
-            document.getElementById('loginForm').classList.remove('active');
-        }
-
-        function selectColor(color, element) {
-            selectedColor = color;
-            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
-            element.classList.add('selected');
-        }
-
         function createAccount() {
             const username = document.getElementById('newUsername').value.trim();
             const password = document.getElementById('newPassword').value.trim();
@@ -763,6 +791,7 @@
             
             // יצירת השחקן
             createPlayer();
+            loadOtherPlayers();
             updateCoinsDisplay();
         }
 
@@ -778,6 +807,55 @@
             player.textContent = currentPlayer.username.charAt(0).toUpperCase();
             
             document.getElementById('gameArea').appendChild(player);
+            
+            // שמירת המיקום של השחקן הנוכחי
+            savePlayerPosition();
+        }
+
+        function loadOtherPlayers() {
+            // טעינת שחקנים אחרים שמחוברים כעת
+            const savedPlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
+            
+            Object.keys(savedPlayers).forEach(playerKey => {
+                const playerData = savedPlayers[playerKey];
+                if (playerData.username !== currentPlayer.username) {
+                    createOtherPlayer(playerData);
+                }
+            });
+        }
+
+        function createOtherPlayer(playerData) {
+            const player = document.createElement('div');
+            player.className = 'player';
+            player.id = `player_${playerData.id}`;
+            player.style.backgroundColor = playerData.color;
+            player.style.left = playerData.x + 'px';
+            player.style.top = playerData.y + 'px';
+            player.style.position = 'absolute';
+            player.style.cursor = 'pointer';
+            player.textContent = playerData.username.charAt(0).toUpperCase();
+            
+            player.onclick = () => showPlayerInfo(playerData);
+            
+            document.getElementById('gameArea').appendChild(player);
+            realPlayers[playerData.id] = playerData;
+        }
+
+        function savePlayerPosition() {
+            if (!currentPlayer) return;
+            
+            const activePlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
+            activePlayers[currentPlayer.id] = {
+                id: currentPlayer.id,
+                username: currentPlayer.username,
+                color: currentPlayer.color,
+                x: currentPlayer.x,
+                y: currentPlayer.y,
+                location: currentLocation,
+                lastSeen: Date.now()
+            };
+            
+            localStorage.setItem('activePlayers', JSON.stringify(activePlayers));
         }
 
         function updateCoinsDisplay() {
@@ -785,6 +863,13 @@
         }
 
         function backToMenu() {
+            // הסרת השחקן מהרשימה הפעילה
+            if (currentPlayer) {
+                const activePlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
+                delete activePlayers[currentPlayer.id];
+                localStorage.setItem('activePlayers', JSON.stringify(activePlayers));
+            }
+            
             document.getElementById('gameArea').style.display = 'none';
             document.getElementById('mainScreen').style.display = 'block';
             
@@ -795,6 +880,105 @@
             closeChatPanel();
             
             loadAccounts();
+        }
+
+        function showPlayerInfo(player) {
+            selectedPlayer = player;
+            document.getElementById('selectedPlayerName').textContent = player.username;
+            
+            const friendActionBtn = document.getElementById('friendActionBtn');
+            const isFriend = friends.some(friend => friend.username === player.username);
+            
+            if (isFriend) {
+                friendActionBtn.textContent = 'שחקן זה כבר חברך';
+                friendActionBtn.disabled = true;
+            } else {
+                friendActionBtn.textContent = 'שלח בקשת חברות';
+                friendActionBtn.disabled = false;
+            }
+            
+            document.getElementById('playerInfoPanel').style.display = 'block';
+            
+            setTimeout(() => {
+                if (document.getElementById('playerInfoPanel').style.display === 'block') {
+                    document.getElementById('playerInfoPanel').style.display = 'none';
+                }
+            }, 5000);
+        }
+
+        function handleFriendAction() {
+            if (selectedPlayer && !friends.some(friend => friend.username === selectedPlayer.username)) {
+                sendFriendRequest(selectedPlayer);
+                document.getElementById('playerInfoPanel').style.display = 'none';
+            }
+        }
+
+        function sendFriendRequest(player) {
+            // שמירת בקשת חברות במערכת
+            const friendRequests = JSON.parse(localStorage.getItem('friendRequests') || '{}');
+            if (!friendRequests[player.username]) {
+                friendRequests[player.username] = [];
+            }
+            
+            friendRequests[player.username].push({
+                from: currentPlayer.username,
+                fromColor: currentPlayer.color,
+                timestamp: Date.now()
+            });
+            
+            localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
+            alert(`נשלחה בקשת חברות ל${player.username}`);
+        }
+
+        function checkFriendRequests() {
+            if (!currentPlayer) return;
+            
+            const friendRequests = JSON.parse(localStorage.getItem('friendRequests') || '{}');
+            const myRequests = friendRequests[currentPlayer.username] || [];
+            
+            if (myRequests.length > 0) {
+                const request = myRequests[0];
+                document.getElementById('friendRequestSender').textContent = request.from;
+                document.getElementById('friendRequest').style.display = 'block';
+            }
+        }
+
+        function acceptFriendRequest() {
+            const senderName = document.getElementById('friendRequestSender').textContent;
+            
+            // הוספת החבר לרשימה
+            const friendRequests = JSON.parse(localStorage.getItem('friendRequests') || '{}');
+            const myRequests = friendRequests[currentPlayer.username] || [];
+            const request = myRequests.find(req => req.from === senderName);
+            
+            if (request) {
+                friends.push({
+                    username: request.from,
+                    status: 'online',
+                    color: request.fromColor
+                });
+                saveCurrentAccount();
+                
+                // הסרת הבקשה
+                friendRequests[currentPlayer.username] = myRequests.filter(req => req.from !== senderName);
+                localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
+                
+                alert(`${senderName} נוסף לרשימת החברים!`);
+            }
+            
+            document.getElementById('friendRequest').style.display = 'none';
+        }
+
+        function declineFriendRequest() {
+            const senderName = document.getElementById('friendRequestSender').textContent;
+            
+            // הסרת הבקשה
+            const friendRequests = JSON.parse(localStorage.getItem('friendRequests') || '{}');
+            const myRequests = friendRequests[currentPlayer.username] || [];
+            friendRequests[currentPlayer.username] = myRequests.filter(req => req.from !== senderName);
+            localStorage.setItem('friendRequests', JSON.stringify(friendRequests));
+            
+            document.getElementById('friendRequest').style.display = 'none';
         }
 
         function openWardrobe() {
@@ -826,6 +1010,7 @@
                     playerElement.style.backgroundColor = color;
                 }
                 saveCurrentAccount();
+                savePlayerPosition();
             }
         }
 
@@ -835,7 +1020,7 @@
             
             if (friends.length === 0) {
                 const noFriends = document.createElement('p');
-                noFriends.textContent = 'אין לך חברים עדיין';
+                noFriends.textContent = 'אין לך חברים עדיין. חפש אנשים באזור המשחק ושלח להם בקשות חברות!';
                 noFriends.style.textAlign = 'center';
                 noFriends.style.color = '#666';
                 friendsList.appendChild(noFriends);
@@ -846,22 +1031,42 @@
                 const friendItem = document.createElement('div');
                 friendItem.className = 'friend-item';
                 
+                // בדיקה אם החבר מחובר כעת
+                const activePlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
+                const isOnline = Object.values(activePlayers).some(player => 
+                    player.username === friend.username && 
+                    Date.now() - player.lastSeen < 60000 // פעיל ב-60 השניות האחרונות
+                );
+                
+                friend.status = isOnline ? 'online' : 'offline';
+                
                 const statusClass = `status-${friend.status}`;
-                const statusText = friend.status === 'online' ? 'מחובר' : 
-                                 friend.status === 'busy' ? 'עסוק' : 'מנותק';
+                const statusText = friend.status === 'online' ? 'מחובר' : 'מנותק';
                 
                 friendItem.innerHTML = `
                     <span>${friend.username}</span>
                     <span class="friend-status ${statusClass}">${statusText}</span>
                 `;
                 
-                friendItem.onclick = () => openChatWithFriend(friend);
+                // רק אם החבר מחובר אפשר לפתוח צ'אט
+                if (friend.status === 'online') {
+                    friendItem.onclick = () => openChatWithFriend(friend);
+                    friendItem.style.cursor = 'pointer';
+                } else {
+                    friendItem.style.opacity = '0.6';
+                    friendItem.style.cursor = 'not-allowed';
+                }
                 
                 friendsList.appendChild(friendItem);
             });
         }
 
         function openChatWithFriend(friend) {
+            if (friend.status !== 'online') {
+                alert('החבר לא מחובר כרגע');
+                return;
+            }
+            
             currentChatFriend = friend;
             document.getElementById('chatTitle').textContent = `צ'אט עם ${friend.username}`;
             
@@ -872,30 +1077,46 @@
             document.getElementById('chatPanel').style.display = 'flex';
         }
 
-        function closeChatPanel() {
-            document.getElementById('chatPanel').style.display = 'none';
-            currentChatFriend = null;
-        }
-
         function loadChatMessages(friendName) {
             const chatKey = `${currentPlayer.username}_${friendName}`;
-            const messages = chatMessages[chatKey] || [];
+            const reverseChatKey = `${friendName}_${currentPlayer.username}`;
+            
+            // טעינת הודעות משני הכיוונים
+            const messages1 = JSON.parse(localStorage.getItem(`chat_${chatKey}`) || '[]');
+            const messages2 = JSON.parse(localStorage.getItem(`chat_${reverseChatKey}`) || '[]');
+            
+            // איחוד וסידור ההודעות לפי זמן
+            const allMessages = [...messages1, ...messages2].sort((a, b) => a.timestamp - b.timestamp);
             
             const chatMessagesDiv = document.getElementById('chatMessages');
             chatMessagesDiv.innerHTML = '';
             
-            messages.forEach(msg => {
-                const messageElement = document.createElement('div');
-                messageElement.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}`;
-                messageElement.style.marginBottom = '5px';
-                if (msg.sender === currentPlayer.username) {
-                    messageElement.style.textAlign = 'right';
-                    messageElement.style.color = '#2196F3';
-                }
-                chatMessagesDiv.appendChild(messageElement);
-            });
+            if (allMessages.length === 0) {
+                const welcomeMsg = document.createElement('div');
+                welcomeMsg.textContent = 'התחל שיחה עם החבר שלך!';
+                welcomeMsg.style.textAlign = 'center';
+                welcomeMsg.style.color = '#666';
+                welcomeMsg.style.fontStyle = 'italic';
+                chatMessagesDiv.appendChild(welcomeMsg);
+            } else {
+                allMessages.forEach(msg => {
+                    const messageElement = document.createElement('div');
+                    messageElement.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}`;
+                    messageElement.style.marginBottom = '5px';
+                    if (msg.sender === currentPlayer.username) {
+                        messageElement.style.textAlign = 'right';
+                        messageElement.style.color = '#2196F3';
+                    }
+                    chatMessagesDiv.appendChild(messageElement);
+                });
+            }
             
             chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+        }
+
+        function closeChatPanel() {
+            document.getElementById('chatPanel').style.display = 'none';
+            currentChatFriend = null;
         }
 
         function handleChatKeyPress(event) {
@@ -911,33 +1132,20 @@
             if (message && currentPlayer && currentChatFriend) {
                 const chatKey = `${currentPlayer.username}_${currentChatFriend.username}`;
                 
-                if (!chatMessages[chatKey]) {
-                    chatMessages[chatKey] = [];
-                }
+                const chatMessages = JSON.parse(localStorage.getItem(`chat_${chatKey}`) || '[]');
                 
-                chatMessages[chatKey].push({
+                const newMessage = {
                     sender: currentPlayer.username,
                     text: message,
                     timestamp: Date.now()
-                });
+                };
+                
+                chatMessages.push(newMessage);
+                localStorage.setItem(`chat_${chatKey}`, JSON.stringify(chatMessages));
                 
                 // עדכון התצוגה
                 loadChatMessages(currentChatFriend.username);
                 input.value = '';
-                
-                // סימולציה של תגובה אוטומטית
-                setTimeout(() => {
-                    const responses = ['היי!', 'מה שלומך?', 'בואו נשחק יחד!', 'איך המשחק?'];
-                    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                    
-                    chatMessages[chatKey].push({
-                        sender: currentChatFriend.username,
-                        text: randomResponse,
-                        timestamp: Date.now()
-                    });
-                    
-                    loadChatMessages(currentChatFriend.username);
-                }, 1000);
             }
         }
 
@@ -998,6 +1206,9 @@
                 if (playerElement) {
                     playerElement.textContent = newUsername.charAt(0).toUpperCase();
                 }
+                
+                // עדכון במערכת השחקנים הפעילים
+                savePlayerPosition();
                 
                 alert('הפרטים עודכנו בהצלחה!');
                 closeModal('editAccountModal');
@@ -1235,6 +1446,7 @@
             currentPlayer.y = Math.random() * (window.innerHeight - 100) + 50;
             
             createPlayer();
+            loadOtherPlayers();
             updateLocationBackground(location);
         }
 
@@ -1262,6 +1474,20 @@
                     localStorage.setItem('gameAccounts', JSON.stringify(accounts));
                 }
             }
+        }
+
+        function cleanupInactivePlayers() {
+            const activePlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
+            const now = Date.now();
+            const maxInactiveTime = 2 * 60 * 1000; // 2 דקות
+            
+            Object.keys(activePlayers).forEach(playerId => {
+                if (now - activePlayers[playerId].lastSeen > maxInactiveTime) {
+                    delete activePlayers[playerId];
+                }
+            });
+            
+            localStorage.setItem('activePlayers', JSON.stringify(activePlayers));
         }
 
         // תנועה עם חצים
@@ -1324,53 +1550,125 @@
             player.style.left = newX + 'px';
             player.style.top = newY + 'px';
             
+            // שמירת המיקום החדש
+            savePlayerPosition();
+            
             e.preventDefault();
         });
-
-        // יצירת חברים דמה בתחילת המשחק
-        function createDemoFriends() {
-            if (friends.length === 0) {
-                friends = [
-                    { username: 'אלכס', color: '#4ECDC4', status: 'online' },
-                    { username: 'מיכל', color: '#45B7D1', status: 'busy' },
-                    { username: 'דני', color: '#96CEB4', status: 'offline' }
-                ];
-                saveCurrentAccount();
-            }
-        }
 
         // אתחול
         window.onload = function() {
             loadAccounts();
             
-            // שמירה אוטומטית כל 30 שניות
-            setInterval(saveCurrentAccount, 30000);
+            // ניקוי שחקנים לא פעילים כל דקה
+            setInterval(cleanupInactivePlayers, 60000);
+            
+            // שמירה אוטומטית כל 10 שניות
+            setInterval(() => {
+                if (currentPlayer) {
+                    savePlayerPosition();
+                    saveCurrentAccount();
+                }
+            }, 10000);
+            
+            // בדיקת בקשות חברות כל 5 שניות
+            setInterval(() => {
+                if (currentPlayer) {
+                    checkFriendRequests();
+                }
+            }, 5000);
+            
+            // עדכון מיקומי שחקנים אחרים כל 3 שניות
+            setInterval(() => {
+                if (currentPlayer && document.getElementById('gameArea').style.display === 'block') {
+                    updateOtherPlayersPositions();
+                }
+            }, 3000);
         };
 
-        // הוספת חברים דמה כשנכנסים למשחק
-        function loginWithAccount(account) {
-            currentPlayer = {
-                id: Date.now(),
-                username: account.username,
-                color: account.color,
-                x: Math.random() * (window.innerWidth - 100) + 50,
-                y: Math.random() * (window.innerHeight - 100) + 50
-            };
+        function updateOtherPlayersPositions() {
+            cleanupInactivePlayers();
             
-            coins = account.coins || 0;
-            friends = account.friends || [];
+            const activePlayers = JSON.parse(localStorage.getItem('activePlayers') || '{}');
             
-            // יצירת חברים דמה אם אין
-            createDemoFriends();
+            // הסרת שחקנים שכבר לא פעילים
+            Object.keys(realPlayers).forEach(playerId => {
+                if (!activePlayers[playerId]) {
+                    const playerElement = document.getElementById(`player_${playerId}`);
+                    if (playerElement) {
+                        playerElement.remove();
+                    }
+                    delete realPlayers[playerId];
+                }
+            });
             
-            // מעבר למשחק
-            document.getElementById('mainScreen').style.display = 'none';
-            document.getElementById('gameArea').style.display = 'block';
-            
-            // יצירת השחקן
-            createPlayer();
-            updateCoinsDisplay();
+            // הוספת או עדכון שחקנים חדשים/קיימים
+            Object.keys(activePlayers).forEach(playerId => {
+                const playerData = activePlayers[playerId];
+                if (playerData.username !== currentPlayer.username && playerData.location === currentLocation) {
+                    const existingPlayer = document.getElementById(`player_${playerId}`);
+                    
+                    if (existingPlayer) {
+                        // עדכון מיקום
+                        existingPlayer.style.left = playerData.x + 'px';
+                        existingPlayer.style.top = playerData.y + 'px';
+                        existingPlayer.style.backgroundColor = playerData.color;
+                    } else {
+                        // יצירת שחקן חדש
+                        createOtherPlayer(playerData);
+                    }
+                    
+                    realPlayers[playerId] = playerData;
+                }
+            });
         }
+
+        function loadAccounts() {
+            accounts = JSON.parse(localStorage.getItem('gameAccounts') || '[]');
+            
+            const accountsList = document.getElementById('accountsList');
+            accountsList.innerHTML = '';
+            
+            if (accounts.length > 0) {
+                const title = document.createElement('h3');
+                title.textContent = 'חשבונות קיימים:';
+                accountsList.appendChild(title);
+                
+                accounts.forEach(account => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'padding: 10px; margin: 5px; background: #f0f0f0; border-radius: 8px; cursor: pointer;';
+                    item.innerHTML = `
+                        <div style="width: 20px; height: 20px; background: ${account.color}; border-radius: 50%; display: inline-block; margin-left: 10px;"></div>
+                        ${account.username}
+                    `;
+                    item.onclick = () => loginWithAccount(account);
+                    accountsList.appendChild(item);
+                });
+            }
+        }
+
+        function showCreateForm() {
+            hideAllForms();
+            document.getElementById('createForm').classList.add('active');
+        }
+
+        function showLoginForm() {
+            hideAllForms();
+            document.getElementById('loginForm').classList.add('active');
+        }
+
+        function hideAllForms() {
+            document.getElementById('createForm').classList.remove('active');
+            document.getElementById('loginForm').classList.remove('active');
+        }
+
+        function selectColor(color, element) {
+            selectedColor = color;
+            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+
+                
     </script>
 </body>
 </html>
