@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>משחק מרובה משתתפים</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .button:hover {
+            background: #45a049;
+        }
+
+        .form-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
+        .form-group {
+            margin: 15px 0;
+            text-align: right;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .color-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+        }
+
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .color-option.selected {
+            border-color: #333;
+        }
+
+        .game-area {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #f0f0f0;
+        }
+
+        .player {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .ui-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .ui-button {
+            padding: 10px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .coins {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: gold;
+            color: #333;
+            padding: 10px 15px;
+            border-radius: 25px;
+            font-weight: bold;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .friends-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+
+        .friend-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        .friend-item:hover {
+            background: #f0f0f0;
+        }
+
+        .friend-status {
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+
+        .status-online { background: #4CAF50; color: white; }
+        .status-busy { background: #FF9800; color: white; }
+        .status-offline { background: #9E9E9E; color: white; }
+
+        .phone-screen {
+            width: 350px;
+            height: 500px;
+            background: #f5f5f5;
+            border-radius: 20px;
+            padding: 20px;
+            border: 3px solid #333;
+            margin: 0 auto;
+        }
+
+        .phone-menu {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+
+        .phone-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            padding: 20px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .phone-button:hover {
+            transform: scale(1.05);
+        }
+
+        .map-area {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .map-location {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .map-location:hover {
+            transform: scale(1.05);
+        }
+
+        .chat-panel {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 500px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            display: none;
+            flex-direction: column;
+            z-index: 2001;
+            border: 3px solid #2196F3;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .chat-input button {
+            padding: 8px 15px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .mini-game-area {
+            width: 400px;
+            height: 300px;
+            background: #f0f0f0;
+            border: 2px solid #333;
+            position: relative;
+            overflow: hidden;
+            margin: 20px auto;
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #f44336;
+            border-radius: 5px;
+        }
+
+        .bomb {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background: #FF5722;
+            border-radius: 50%;
+        }
+
+        .trivia-answers {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .trivia-answer {
+            padding: 15px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .trivia-answer:hover {
+            background: #1976D2;
+        }
+
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f44336;
+            margin: 10px 0;
+        }
+
+        .settings-preview {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .settings-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- מסך ראשי -->
+    <div id="mainScreen" class="container">
+        <h1>ברוכים הבאים למשחק מרובה משתתפים</h1>
+        
+        <div id="accountsList"></div>
+        
+        <button class="button" onclick="showCreateForm()">צור חשבון חדש</button>
+        <button class="button" onclick="showLoginForm()">היכנס לחשבון אחר</button>
+        
+        <!-- טופס יצירת חשבון -->
+        <div id="createForm" class="form-section">
+            <h2>צור חשבון חדש</h2>
+            <div class="form-group">
+                <label>שם משתמש:</label>
+                <input type="text" id="newUsername" placeholder="הכנס שם משתמש">
+            </div>
+            <div class="form-group">
+                <label>סיסמה:</label>
+                <input type="password" id="newPassword" placeholder="הכנס סיסמה">
+            </div>
+            <div class="form-group">
+                <label>בחר צבע לדמות:</label>
+                <div class="color-selector">
+                    <div class="color-option" style="background: #FF6B6B" onclick="selectColor('#FF6B6B', this)"></div>
+                    <div class="color-option" style="background: #4ECDC4" onclick="selectColor('#4ECDC4', this)"></div>
+                    <div class="color-option" style="background: #45B7D1" onclick="selectColor('#45B7D1', this)"></div>
+                    <div class="color-option" style="background: #96CEB4" onclick="selectColor('#96CEB4', this)"></div>
+                    <div class="color-option" style="background: #FECA57" onclick="selectColor('#FECA57', this)"></div>
+                    <div class="color-option" style="background: #FF9FF3" onclick="selectColor('#FF9FF3', this)"></div>
+                </div>
+            </div>
+            <button class="button" onclick="createAccount()">אשר ויצירת חשבון</button>
+            <button class="button" onclick="hideAllForms()" style="background: #ccc;">ביטול</button>
+        </div>
+        
+        <!-- טופס התחברות -->
+        <div id="loginForm" class="form-section">
+            <h2>היכנס לחשבון קיים</h2>
+            <div class="form-group">
+                <label>שם משתמש:</label>
+                <input type="text" id="loginUsername" placeholder="הכנס שם משתמש">
+            </div>
+            <div class="form-group">
+                <label>סיסמה:</label>
+                <input type="password" id="loginPassword" placeholder="הכנס סיסמה">
+            </div>
+            <button class="button" onclick="loginAccount()">התחבר למשחק</button>
+            <button class="button" onclick="hideAllForms()" style="background: #ccc;">ביטול</button>
+        </div>
+    </div>
+
+    <!-- אזור המשחק -->
+    <div id="gameArea" class="game-area">
+        <button class="back-button" onclick="backToMenu()">חזור לתפריט</button>
+        <div class="coins" id="coinsDisplay">🪙 0</div>
+        
+        <div class="ui-panel">
+            <button class="ui-button" onclick="openWardrobe()">👕 ארון</button>
+            <button class="ui-button" onclick="openFriends()">👥 חברים</button>
+            <button class="ui-button" onclick="openPhone()">📱 טלפון</button>
+            <button class="ui-button" onclick="openMap()">🗺️ מפה</button>
+        </div>
+    </div>
+
+    <!-- Wardrobe Modal -->
+    <div class="modal" id="wardrobeModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('wardrobeModal')">&times;</button>
+            <h2>ארון הבגדים</h2>
+            <p>בחר צבע לדמות שלך:</p>
+            <div class="color-selector">
+                <div class="color-option" style="background: #FF6B6B" onclick="changePlayerColor('#FF6B6B')"></div>
+                <div class="color-option" style="background: #4ECDC4" onclick="changePlayerColor('#4ECDC4')"></div>
+                <div class="color-option" style="background: #45B7D1" onclick="changePlayerColor('#45B7D1')"></div>
+                <div class="color-option" style="background: #96CEB4" onclick="changePlayerColor('#96CEB4')"></div>
+                <div class="color-option" style="background: #FECA57" onclick="changePlayerColor('#FECA57')"></div>
+                <div class="color-option" style="background: #FF9FF3" onclick="changePlayerColor('#FF9FF3')"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel" id="chatPanel">
+        <div class="chat-header">
+            <h3 id="chatTitle">צ'אט</h3>
+            <button onclick="closeChatPanel()" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="הקלד הודעה..." onkeypress="handleChatKeyPress(event)">
+            <button onclick="sendMessage()">שלח</button>
+        </div>
+    </div>
+
+    <!-- Friends Modal -->
+    <div class="modal" id="friendsModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('friendsModal')">&times;</button>
+            <h2>החברים שלי</h2>
+            <div class="friends-list" id="friendsList"></div>
+        </div>
+    </div>
+
+    <!-- Phone Modal -->
+    <div class="modal" id="phoneModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('phoneModal')">&times;</button>
+            <h2>טלפון</h2>
+            <div class="phone-screen">
+                <div class="phone-menu">
+                    <button class="phone-button" onclick="openSettings()">⚙️ הגדרות</button>
+                    <button class="phone-button" onclick="openGames()">🎮 משחקים</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('settingsModal')">&times;</button>
+            <h2>הגדרות</h2>
+            <div class="settings-preview">
+                <div class="player" id="settingsPreview" style="position: relative; display: inline-block; width: 60px; height: 60px; font-size: 20px;"></div>
+                <p style="margin-top: 10px;">כך אתה נראה במשחק</p>
+            </div>
+            <div class="settings-buttons">
+                <button class="button" onclick="switchAccount()">החלף חשבון</button>
+                <button class="button" onclick="showEditAccount()">שנה פרטים</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Account Modal -->
+    <div class="modal" id="editAccountModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('editAccountModal')">&times;</button>
+            <h2>שנה פרטי חשבון</h2>
+            <div class="form-group">
+                <label>שם משתמש חדש:</label>
+                <input type="text" id="editUsername" placeholder="הכנס שם משתמש חדש">
+            </div>
+            <div class="form-group">
+                <label>סיסמה חדשה:</label>
+                <input type="password" id="editPassword" placeholder="הכנס סיסמה חדשה">
+            </div>
+            <button class="button" onclick="saveAccountChanges()">אשר שינויים</button>
+            <button class="button" onclick="closeModal('editAccountModal')" style="background: #ccc;">ביטול</button>
+        </div>
+    </div>
+
+    <!-- Games Modal -->
+    <div class="modal" id="gamesModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('gamesModal')">&times;</button>
+            <h2>משחקים</h2>
+            <div class="phone-menu">
+                <button class="phone-button" onclick="startTrivia()">🧠 טריוויה</button>
+                <button class="phone-button" onclick="startObstacles()">🏃 מכשולים</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trivia Modal -->
+    <div class="modal" id="triviaModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeTrivia()">&times;</button>
+            <h2>משחק הטריוויה</h2>
+            <div class="timer" id="triviaTimer">10</div>
+            <div id="triviaQuestion" style="font-size: 18px; margin: 20px 0;"></div>
+            <div class="trivia-answers" id="triviaAnswers"></div>
+            <div style="margin-top: 20px;">
+                <p>שאלה: <span id="questionNumber">1</span></p>
+                <p>מטבעות שזכיתי: <span id="triviaCoins">0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Obstacles Modal -->
+    <div class="modal" id="obstaclesModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeObstacles()">&times;</button>
+            <h2>משחק המכשולים</h2>
+            <div class="mini-game-area" id="obstaclesGame">
+                <div class="player" id="obstaclePlayer" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);"></div>
+            </div>
+            <p>השתמש בחצים כדי להתחמק מהמכשולים!</p>
+            <p>מכשולים שעברו: <span id="obstacleCount">0</span></p>
+            <p>מטבעות שזכיתי: <span id="obstacleCoins">0</span></p>
+        </div>
+    </div>
+
+    <!-- Map Modal -->
+    <div class="modal" id="mapModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <button class="close-btn" onclick="closeModal('mapModal')">&times;</button>
+            <h2>מפת המשחק</h2>
+            <div class="map-area">
+                <div class="map-location" onclick="goToLocation('park')">🌳 הפארק</div>
+                <div class="map-location" onclick="goToLocation('beach')">🏖️ החוף</div>
+                <div class="map-location" onclick="goToLocation('city')">🏙️ העיר</div>
+                <div class="map-location" onclick="goToLocation('forest')">🌲 היער</div>
+                <div class="map-location" onclick="goToLocation('mountain')">⛰️ ההר</div>
+                <div class="map-location" onclick="goToLocation('desert')">🏜️ המדבר</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedColor = '#FF6B6B';
+        let currentPlayer = null;
+        let accounts = [];
+        let friends = [];
+        let coins = 0;
+        let currentLocation = 'park';
+        let currentChatFriend = null;
+
+        // Trivia game variables
+        let triviaQuestions = [
+            // רמה קלה
+            { question: "מה היא בירת צרפת?", answers: ["לונדון", "פריז", "רומא", "מדריד"], correct: 1, level: 1 },
+            { question: "כמה רגליים יש לעכביש?", answers: ["6", "8", "10", "12"], correct: 1, level: 1 },
+            { question: "מה הוא הכוכב הקרוב ביותר לכדור הארץ?", answers: ["הירח", "מרס", "השמש", "נוגה"], correct: 2, level: 1 },
+            { question: "איזה גז נושמים בני אדם?", answers: ["חמצן", "פחמן דו-חמצני", "חנקן", "הליום"], correct: 0, level: 1 },
+            
+            // רמה בינונית
+            { question: "באיזו שנה הוקמה מדינת ישראל?", answers: ["1947", "1948", "1949", "1950"], correct: 1, level: 2 },
+            { question: "מה היא יחידת הלחץ הבסיסית?", answers: ["ניוטון", "פסקל", "ג'ול", "וואט"], correct: 1, level: 2 },
+            { question: "איזה יסוד כימי סמלו Au?", answers: ["כסף", "זהב", "אלומיניום", "ארגון"], correct: 1, level: 2 },
+            { question: "מי כתב את 'המטמורפוזה'?", answers: ["קפקא", "קמי", "סארטר", "דוסטויבסקי"], correct: 0, level: 2 },
+            
+            // רמה קשה
+            { question: "מה הוא המהירות המקסימלית של האור בוואקום?", answers: ["299,792,458 מ/ש", "300,000,000 מ/ש", "299,000,000 מ/ש", "301,000,000 מ/ש"], correct: 0, level: 3 },
+            { question: "באיזו שנה נפל חומת ברלין?", answers: ["1987", "1988", "1989", "1990"], correct: 2, level: 3 },
+            { question: "מה הוא המספר האטומי של אורניום?", answers: ["90", "91", "92", "93"], correct: 2, level: 3 },
+            { question: "מי המציא את תורת היחסות הכללית?", answers: ["ניוטון", "איינשטיין", "הוקינג", "פיינמן"], correct: 1, level: 3 }
+        ];
+
+        let currentTriviaQuestion = 0;
+        let triviaTimer = 10;
+        let triviaInterval;
+        let triviaCoinsEarned = 0;
+        let currentTriviaLevel = 1;
+
+        // Obstacles game variables
+        let obstacleGame = {
+            player: { x: 200, y: 270 },
+            obstacles: [],
+            bomb: { x: 0, y: 270 },
+            score: 0,
+            running: false
+        };
+
+        // Chat system
+        let chatMessages = {};
+
+        // טעינת חשבונות
+        function loadAccounts() {
+            accounts = JSON.parse(localStorage.getItem('gameAccounts') || '[]');
+            
+            const accountsList = document.getElementById('accountsList');
+            accountsList.innerHTML = '';
+            
+            if (accounts.length > 0) {
+                const title = document.createElement('h3');
+                title.textContent = 'חשבונות קיימים:';
+                accountsList.appendChild(title);
+                
+                accounts.forEach(account => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'padding: 10px; margin: 5px; background: #f0f0f0; border-radius: 8px; cursor: pointer;';
+                    item.innerHTML = `
+                        <div style="width: 20px; height: 20px; background: ${account.color}; border-radius: 50%; display: inline-block; margin-left: 10px;"></div>
+                        ${account.username}
+                    `;
+                    item.onclick = () => loginWithAccount(account);
+                    accountsList.appendChild(item);
+                });
+            }
+        }
+
+        function showCreateForm() {
+            hideAllForms();
+            document.getElementById('createForm').classList.add('active');
+        }
+
+        function showLoginForm() {
+            hideAllForms();
+            document.getElementById('loginForm').classList.add('active');
+        }
+
+        function hideAllForms() {
+            document.getElementById('createForm').classList.remove('active');
+            document.getElementById('loginForm').classList.remove('active');
+        }
+
+        function selectColor(color, element) {
+            selectedColor = color;
+            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+
+        function createAccount() {
+            const username = document.getElementById('newUsername').value.trim();
+            const password = document.getElementById('newPassword').value.trim();
+            
+            if (!username || !password) {
+                alert('אנא מלא את כל השדות');
+                return;
+            }
+
+            if (accounts.some(acc => acc.username === username)) {
+                alert('שם המשתמש כבר קיים');
+                return;
+            }
+
+            const newAccount = {
+                username: username,
+                password: password,
+                color: selectedColor,
+                coins: 0,
+                friends: []
+            };
+
+            accounts.push(newAccount);
+            localStorage.setItem('gameAccounts', JSON.stringify(accounts));
+            
+            alert('החשבון נוצר בהצלחה!');
+            loginWithAccount(newAccount);
+        }
+
+        function loginAccount() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            
+            if (!username || !password) {
+                alert('אנא מלא את כל השדות');
+                return;
+            }
+            
+            const account = accounts.find(acc => acc.username === username && acc.password === password);
+            
+            if (account) {
+                loginWithAccount(account);
+            } else {
+                alert('שם משתמש או סיסמה שגויים');
+            }
+        }
+
+        function loginWithAccount(account) {
+            currentPlayer = {
+                id: Date.now(),
+                username: account.username,
+                color: account.color,
+                x: Math.random() * (window.innerWidth - 100) + 50,
+                y: Math.random() * (window.innerHeight - 100) + 50
+            };
+            
+            coins = account.coins || 0;
+            friends = account.friends || [];
+            
+            // מעבר למשחק
+            document.getElementById('mainScreen').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'block';
+            
+            // יצירת השחקן
+            createPlayer();
+            updateCoinsDisplay();
+        }
+
+        function createPlayer() {
+            const player = document.createElement('div');
+            player.className = 'player';
+            player.id = 'mainPlayer';
+            player.style.backgroundColor = currentPlayer.color;
+            player.style.left = currentPlayer.x + 'px';
+            player.style.top = currentPlayer.y + 'px';
+            player.style.position = 'absolute';
+            player.style.cursor = 'default';
+            player.textContent = currentPlayer.username.charAt(0).toUpperCase();
+            
+            document.getElementById('gameArea').appendChild(player);
+        }
+
+        function updateCoinsDisplay() {
+            document.getElementById('coinsDisplay').textContent = `🪙 ${coins}`;
+        }
+
+        function backToMenu() {
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('mainScreen').style.display = 'block';
+            
+            // ניקוי שחקנים
+            document.querySelectorAll('.player').forEach(p => p.remove());
+            
+            // סגירת צ'אט
+            closeChatPanel();
+            
+            loadAccounts();
+        }
+
+        function openWardrobe() {
+            document.getElementById('wardrobeModal').style.display = 'flex';
+        }
+
+        function openFriends() {
+            updateFriendsList();
+            document.getElementById('friendsModal').style.display = 'flex';
+        }
+
+        function openPhone() {
+            document.getElementById('phoneModal').style.display = 'flex';
+        }
+
+        function openMap() {
+            document.getElementById('mapModal').style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function changePlayerColor(color) {
+            if (currentPlayer) {
+                currentPlayer.color = color;
+                const playerElement = document.getElementById('mainPlayer');
+                if (playerElement) {
+                    playerElement.style.backgroundColor = color;
+                }
+                saveCurrentAccount();
+            }
+        }
+
+        function updateFriendsList() {
+            const friendsList = document.getElementById('friendsList');
+            friendsList.innerHTML = '';
+            
+            if (friends.length === 0) {
+                const noFriends = document.createElement('p');
+                noFriends.textContent = 'אין לך חברים עדיין';
+                noFriends.style.textAlign = 'center';
+                noFriends.style.color = '#666';
+                friendsList.appendChild(noFriends);
+                return;
+            }
+            
+            friends.forEach(friend => {
+                const friendItem = document.createElement('div');
+                friendItem.className = 'friend-item';
+                
+                const statusClass = `status-${friend.status}`;
+                const statusText = friend.status === 'online' ? 'מחובר' : 
+                                 friend.status === 'busy' ? 'עסוק' : 'מנותק';
+                
+                friendItem.innerHTML = `
+                    <span>${friend.username}</span>
+                    <span class="friend-status ${statusClass}">${statusText}</span>
+                `;
+                
+                friendItem.onclick = () => openChatWithFriend(friend);
+                
+                friendsList.appendChild(friendItem);
+            });
+        }
+
+        function openChatWithFriend(friend) {
+            currentChatFriend = friend;
+            document.getElementById('chatTitle').textContent = `צ'אט עם ${friend.username}`;
+            
+            // טעינת הודעות עם החבר
+            loadChatMessages(friend.username);
+            
+            closeModal('friendsModal');
+            document.getElementById('chatPanel').style.display = 'flex';
+        }
+
+        function closeChatPanel() {
+            document.getElementById('chatPanel').style.display = 'none';
+            currentChatFriend = null;
+        }
+
+        function loadChatMessages(friendName) {
+            const chatKey = `${currentPlayer.username}_${friendName}`;
+            const messages = chatMessages[chatKey] || [];
+            
+            const chatMessagesDiv = document.getElementById('chatMessages');
+            chatMessagesDiv.innerHTML = '';
+            
+            messages.forEach(msg => {
+                const messageElement = document.createElement('div');
+                messageElement.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}`;
+                messageElement.style.marginBottom = '5px';
+                if (msg.sender === currentPlayer.username) {
+                    messageElement.style.textAlign = 'right';
+                    messageElement.style.color = '#2196F3';
+                }
+                chatMessagesDiv.appendChild(messageElement);
+            });
+            
+            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (message && currentPlayer && currentChatFriend) {
+                const chatKey = `${currentPlayer.username}_${currentChatFriend.username}`;
+                
+                if (!chatMessages[chatKey]) {
+                    chatMessages[chatKey] = [];
+                }
+                
+                chatMessages[chatKey].push({
+                    sender: currentPlayer.username,
+                    text: message,
+                    timestamp: Date.now()
+                });
+                
+                // עדכון התצוגה
+                loadChatMessages(currentChatFriend.username);
+                input.value = '';
+                
+                // סימולציה של תגובה אוטומטית
+                setTimeout(() => {
+                    const responses = ['היי!', 'מה שלומך?', 'בואו נשחק יחד!', 'איך המשחק?'];
+                    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                    
+                    chatMessages[chatKey].push({
+                        sender: currentChatFriend.username,
+                        text: randomResponse,
+                        timestamp: Date.now()
+                    });
+                    
+                    loadChatMessages(currentChatFriend.username);
+                }, 1000);
+            }
+        }
+
+        function openSettings() {
+            closeModal('phoneModal');
+            
+            const preview = document.getElementById('settingsPreview');
+            preview.style.backgroundColor = currentPlayer.color;
+            preview.textContent = currentPlayer.username.charAt(0).toUpperCase();
+            
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+
+        function openGames() {
+            closeModal('phoneModal');
+            document.getElementById('gamesModal').style.display = 'flex';
+        }
+
+        function switchAccount() {
+            saveCurrentAccount();
+            closeModal('settingsModal');
+            backToMenu();
+        }
+
+        function showEditAccount() {
+            document.getElementById('editUsername').value = currentPlayer.username;
+            document.getElementById('editPassword').value = '';
+            closeModal('settingsModal');
+            document.getElementById('editAccountModal').style.display = 'flex';
+        }
+
+        function saveAccountChanges() {
+            const newUsername = document.getElementById('editUsername').value.trim();
+            const newPassword = document.getElementById('editPassword').value.trim();
+            
+            if (!newUsername || !newPassword) {
+                alert('אנא מלא את כל השדות');
+                return;
+            }
+            
+            // בדיקה אם שם המשתמש החדש כבר קיים (אם שונה מהנוכחי)
+            if (newUsername !== currentPlayer.username && accounts.some(acc => acc.username === newUsername)) {
+                alert('שם המשתמש כבר קיים');
+                return;
+            }
+            
+            // עדכון החשבון
+            const accountIndex = accounts.findIndex(acc => acc.username === currentPlayer.username);
+            if (accountIndex !== -1) {
+                accounts[accountIndex].username = newUsername;
+                accounts[accountIndex].password = newPassword;
+                localStorage.setItem('gameAccounts', JSON.stringify(accounts));
+                
+                currentPlayer.username = newUsername;
+                
+                // עדכון התצוגה
+                const playerElement = document.getElementById('mainPlayer');
+                if (playerElement) {
+                    playerElement.textContent = newUsername.charAt(0).toUpperCase();
+                }
+                
+                alert('הפרטים עודכנו בהצלחה!');
+                closeModal('editAccountModal');
+            }
+        }
+
+        function startTrivia() {
+            closeModal('gamesModal');
+            currentTriviaQuestion = 0;
+            triviaCoinsEarned = 0;
+            currentTriviaLevel = 1;
+            showTriviaQuestion();
+            document.getElementById('triviaModal').style.display = 'flex';
+        }
+
+        function showTriviaQuestion() {
+            const availableQuestions = triviaQuestions.filter(q => q.level <= currentTriviaLevel);
+            
+            if (currentTriviaQuestion >= availableQuestions.length) {
+                // מעבר לרמה הבאה
+                if (currentTriviaLevel < 3) {
+                    currentTriviaLevel++;
+                    currentTriviaQuestion = 0;
+                }
+            }
+            
+            // חישוב זמן לשאלה - מתחיל מ-10 ויורד עד 3
+            const baseTime = 10;
+            const minTime = 3;
+            const timeReduction = Math.floor(currentTriviaQuestion / 3); // כל 3 שאלות זמן יורד
+            triviaTimer = Math.max(minTime, baseTime - timeReduction);
+            
+            const question = availableQuestions[currentTriviaQuestion % availableQuestions.length];
+            document.getElementById('triviaQuestion').textContent = question.question;
+            document.getElementById('questionNumber').textContent = currentTriviaQuestion + 1;
+            document.getElementById('triviaCoins').textContent = triviaCoinsEarned;
+            
+            const answersContainer = document.getElementById('triviaAnswers');
+            answersContainer.innerHTML = '';
+            
+            question.answers.forEach((answer, index) => {
+                const button = document.createElement('button');
+                button.className = 'trivia-answer';
+                button.textContent = answer;
+                button.onclick = () => answerTrivia(index, question);
+                answersContainer.appendChild(button);
+            });
+            
+            startTriviaTimer();
+        }
+
+        function startTriviaTimer() {
+            const timerElement = document.getElementById('triviaTimer');
+            let currentTimer = triviaTimer;
+            timerElement.textContent = currentTimer;
+            
+            triviaInterval = setInterval(() => {
+                currentTimer--;
+                timerElement.textContent = currentTimer;
+                
+                if (currentTimer <= 0) {
+                    clearInterval(triviaInterval);
+                    alert('הזמן נגמר!');
+                    nextTriviaQuestion();
+                }
+            }, 1000);
+        }
+
+        function answerTrivia(selectedIndex, question) {
+            clearInterval(triviaInterval);
+            
+            if (selectedIndex === question.correct) {
+                alert('תשובה נכונה!');
+                
+                // כל שתי שאלות - 4 מטבעות
+                if ((currentTriviaQuestion + 1) % 2 === 0) {
+                    triviaCoinsEarned += 4;
+                    coins += 4;
+                    updateCoinsDisplay();
+                    saveCurrentAccount();
+                    document.getElementById('triviaCoins').textContent = triviaCoinsEarned;
+                }
+            } else {
+                alert('תשובה שגויה!');
+            }
+            
+            nextTriviaQuestion();
+        }
+
+        function nextTriviaQuestion() {
+            currentTriviaQuestion++;
+            
+            setTimeout(() => {
+                showTriviaQuestion();
+            }, 1000);
+        }
+
+        function closeTrivia() {
+            clearInterval(triviaInterval);
+            closeModal('triviaModal');
+        }
+
+        function startObstacles() {
+            closeModal('gamesModal');
+            resetObstacleGame();
+            document.getElementById('obstaclesModal').style.display = 'flex';
+            runObstacleGame();
+        }
+
+        function resetObstacleGame() {
+            obstacleGame = {
+                player: { x: 180, y: 260 },
+                obstacles: [],
+                bomb: { x: 0, y: 260 },
+                score: 0,
+                running: true
+            };
+            
+            document.getElementById('obstacleCount').textContent = '0';
+            document.getElementById('obstacleCoins').textContent = coins;
+            
+            updateObstaclePlayer();
+        }
+
+        function updateObstaclePlayer() {
+            const player = document.getElementById('obstaclePlayer');
+            player.style.left = obstacleGame.player.x + 'px';
+            player.style.top = obstacleGame.player.y + 'px';
+            player.style.backgroundColor = currentPlayer.color;
+            player.textContent = currentPlayer.username.charAt(0).toUpperCase();
+        }
+
+        function runObstacleGame() {
+            const gameArea = document.getElementById('obstaclesGame');
+            
+            gameArea.querySelectorAll('.obstacle, .bomb').forEach(el => el.remove());
+            
+            const gameLoop = setInterval(() => {
+                if (!obstacleGame.running) {
+                    clearInterval(gameLoop);
+                    return;
+                }
+                
+                // תנועת הפצצה
+                obstacleGame.bomb.x += 2;
+                if (obstacleGame.bomb.x > 400) {
+                    obstacleGame.bomb.x = 0;
+                }
+                
+                let bombElement = gameArea.querySelector('.bomb');
+                if (!bombElement) {
+                    bombElement = document.createElement('div');
+                    bombElement.className = 'bomb';
+                    gameArea.appendChild(bombElement);
+                }
+                bombElement.style.left = obstacleGame.bomb.x + 'px';
+                bombElement.style.top = obstacleGame.bomb.y + 'px';
+                
+                // בדיקת התנגשות עם פצצה
+                if (Math.abs(obstacleGame.bomb.x - obstacleGame.player.x) < 25 &&
+                    Math.abs(obstacleGame.bomb.y - obstacleGame.player.y) < 25) {
+                    obstacleGame.running = false;
+                    clearInterval(gameLoop);
+                    alert('נתפסת על ידי הפצצה! המשחק נגמר');
+                    return;
+                }
+                
+                // יצירת מכשולים חדשים
+                if (Math.random() < 0.02) {
+                    const obstacle = {
+                        x: 400,
+                        y: Math.random() * 250,
+                        id: Date.now()
+                    };
+                    obstacleGame.obstacles.push(obstacle);
+                    
+                    const obstacleElement = document.createElement('div');
+                    obstacleElement.className = 'obstacle';
+                    obstacleElement.id = `obstacle_${obstacle.id}`;
+                    obstacleElement.style.left = obstacle.x + 'px';
+                    obstacleElement.style.top = obstacle.y + 'px';
+                    gameArea.appendChild(obstacleElement);
+                }
+                
+                // תנועת מכשולים
+                obstacleGame.obstacles = obstacleGame.obstacles.filter(obstacle => {
+                    obstacle.x -= 3;
+                    
+                    const element = document.getElementById(`obstacle_${obstacle.id}`);
+                    if (element) {
+                        element.style.left = obstacle.x + 'px';
+                        
+                        // בדיקת התנגשות
+                        if (Math.abs(obstacle.x - obstacleGame.player.x) < 30 &&
+                            Math.abs(obstacle.y - obstacleGame.player.y) < 30) {
+                            obstacleGame.running = false;
+                            clearInterval(gameLoop);
+                            alert('פגעת במכשול! המשחק נגמר');
+                            return false;
+                        }
+                        
+                        // מכשול עבר בהצלחה
+                        if (obstacle.x < -30) {
+                            element.remove();
+                            obstacleGame.score++;
+                            document.getElementById('obstacleCount').textContent = obstacleGame.score;
+                            
+                            // כל 5 מכשולים - 7 מטבעות
+                            if (obstacleGame.score % 5 === 0) {
+                                coins += 7;
+                                updateCoinsDisplay();
+                                document.getElementById('obstacleCoins').textContent = coins;
+                                saveCurrentAccount();
+                            }
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+            }, 50);
+        }
+
+        function closeObstacles() {
+            obstacleGame.running = false;
+            closeModal('obstaclesModal');
+        }
+
+        function goToLocation(location) {
+            currentLocation = location;
+            closeModal('mapModal');
+            
+            document.querySelectorAll('.player').forEach(p => p.remove());
+            
+            currentPlayer.x = Math.random() * (window.innerWidth - 100) + 50;
+            currentPlayer.y = Math.random() * (window.innerHeight - 100) + 50;
+            
+            createPlayer();
+            updateLocationBackground(location);
+        }
+
+        function updateLocationBackground(location) {
+            const gameArea = document.getElementById('gameArea');
+            const backgrounds = {
+                park: 'linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%)',
+                beach: 'linear-gradient(135deg, #03A9F4 0%, #00BCD4 100%)',
+                city: 'linear-gradient(135deg, #607D8B 0%, #455A64 100%)',
+                forest: 'linear-gradient(135deg, #2E7D32 0%, #388E3C 100%)',
+                mountain: 'linear-gradient(135deg, #5D4037 0%, #6D4C41 100%)',
+                desert: 'linear-gradient(135deg, #FF8F00 0%, #FF6F00 100%)'
+            };
+            
+            gameArea.style.background = backgrounds[location] || backgrounds.park;
+        }
+
+        function saveCurrentAccount() {
+            if (currentPlayer) {
+                const accountIndex = accounts.findIndex(acc => acc.username === currentPlayer.username);
+                if (accountIndex !== -1) {
+                    accounts[accountIndex].color = currentPlayer.color;
+                    accounts[accountIndex].coins = coins;
+                    accounts[accountIndex].friends = friends;
+                    localStorage.setItem('gameAccounts', JSON.stringify(accounts));
+                }
+            }
+        }
+
+        // תנועה עם חצים
+        document.addEventListener('keydown', function(e) {
+            // אם משחק המכשולים פועל
+            if (obstacleGame.running && document.getElementById('obstaclesModal').style.display === 'flex') {
+                const speed = 15;
+                switch(e.key) {
+                    case 'ArrowUp':
+                        obstacleGame.player.y = Math.max(0, obstacleGame.player.y - speed);
+                        break;
+                    case 'ArrowDown':
+                        obstacleGame.player.y = Math.min(260, obstacleGame.player.y + speed);
+                        break;
+                    case 'ArrowLeft':
+                        obstacleGame.player.x = Math.max(0, obstacleGame.player.x - speed);
+                        break;
+                    case 'ArrowRight':
+                        obstacleGame.player.x = Math.min(360, obstacleGame.player.x + speed);
+                        break;
+                }
+                updateObstaclePlayer();
+                e.preventDefault();
+                return;
+            }
+            
+            // תנועה רגילה במשחק
+            if (!currentPlayer || document.getElementById('gameArea').style.display === 'none') return;
+            
+            // בדיקה אם יש חלון פתוח
+            const openModal = document.querySelector('.modal[style*="flex"]');
+            const openPanel = document.getElementById('chatPanel').style.display === 'flex';
+            
+            if (openModal || openPanel) return;
+            
+            const player = document.getElementById('mainPlayer');
+            if (!player) return;
+            
+            const speed = 10;
+            let newX = currentPlayer.x;
+            let newY = currentPlayer.y;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    newY = Math.max(0, currentPlayer.y - speed);
+                    break;
+                case 'ArrowDown':
+                    newY = Math.min(window.innerHeight - 40, currentPlayer.y + speed);
+                    break;
+                case 'ArrowLeft':
+                    newX = Math.max(0, currentPlayer.x - speed);
+                    break;
+                case 'ArrowRight':
+                    newX = Math.min(window.innerWidth - 40, currentPlayer.x + speed);
+                    break;
+            }
+            
+            currentPlayer.x = newX;
+            currentPlayer.y = newY;
+            player.style.left = newX + 'px';
+            player.style.top = newY + 'px';
+            
+            e.preventDefault();
+        });
+
+        // יצירת חברים דמה בתחילת המשחק
+        function createDemoFriends() {
+            if (friends.length === 0) {
+                friends = [
+                    { username: 'אלכס', color: '#4ECDC4', status: 'online' },
+                    { username: 'מיכל', color: '#45B7D1', status: 'busy' },
+                    { username: 'דני', color: '#96CEB4', status: 'offline' }
+                ];
+                saveCurrentAccount();
+            }
+        }
+
+        // אתחול
+        window.onload = function() {
+            loadAccounts();
+            
+            // שמירה אוטומטית כל 30 שניות
+            setInterval(saveCurrentAccount, 30000);
+        };
+
+        // הוספת חברים דמה כשנכנסים למשחק
+        function loginWithAccount(account) {
+            currentPlayer = {
+                id: Date.now(),
+                username: account.username,
+                color: account.color,
+                x: Math.random() * (window.innerWidth - 100) + 50,
+                y: Math.random() * (window.innerHeight - 100) + 50
+            };
+            
+            coins = account.coins || 0;
+            friends = account.friends || [];
+            
+            // יצירת חברים דמה אם אין
+            createDemoFriends();
+            
+            // מעבר למשחק
+            document.getElementById('mainScreen').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'block';
+            
+            // יצירת השחקן
+            createPlayer();
+            updateCoinsDisplay();
+        }
+    </script>
+</body>
+</html>
