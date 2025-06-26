@@ -649,6 +649,16 @@
         </div>
     </div>
 
+    <!-- Message Notification Popup -->
+    <div class="friend-request" id="messageNotification" style="display: none; border-color: #2196F3;">
+        <h3 id="messageSender"></h3>
+        <p>שלח לך הודעה</p>
+        <div class="friend-request-buttons">
+            <button class="accept-btn" onclick="openChatFromNotification()" style="background: #2196F3;">פתח</button>
+            <button class="decline-btn" onclick="dismissMessageNotification()">התעלם</button>
+        </div>
+    </div>
+
     <div class="modal" id="phoneModal">
         <div class="modal-content">
             <button class="close-btn" onclick="closeModal('phoneModal')">&times;</button>
@@ -678,7 +688,9 @@
     </div>
 
     <script>
-       const firebaseConfig = {
+        // Firebase Configuration - החלף עם הקונפיגורציה שלך!
+        // אם אין לך Firebase עדיין, השאר את זה כמו שזה והמשחק יעבוד במצב מקומי
+        const firebaseConfig = {
             apiKey: "AIzaSyBZKyN8w32w1pn4hf28Fv9LecsTDgjZRTs",
             authDomain: "my-login-system-d583d.firebaseapp.com",
             databaseURL: "https://my-login-system-d583d-default-rtdb.europe-west1.firebasedatabase.app",
@@ -693,6 +705,8 @@
         let database;
         let isFirebaseConnected = false;
 
+        // נסה להתחבר ל-Firebase רק אם הקונפיגורציה נראית אמיתית
+        // (firebaseConfig.apiKey !== "AIzaSyB123abc456def789ghi012jkl345mno678") {
             try {
                 firebase.initializeApp(firebaseConfig);
                 database = firebase.database();
@@ -702,6 +716,10 @@
                 console.warn('Firebase connection failed:', error);
                 isFirebaseConnected = false;
             }
+       // } else {
+       //     console.log('Using demo Firebase config - running in local mode');
+       //     isFirebaseConnected = false;
+       // }
 
         // Game Variables
         let selectedColor = '#FF6B6B';
@@ -864,11 +882,14 @@
         }
 
         function handleIncomingMessage(messageData) {
-            if (messageData.to === currentPlayer.username && 
-                currentChatFriend && 
-                messageData.from === currentChatFriend.username) {
-                
-                displayMessage(messageData.from, messageData.text);
+            if (messageData.to === currentPlayer.username) {
+                // אם הצ'אט פתוח עם השולח - הצג את ההודעה ישירות
+                if (currentChatFriend && messageData.from === currentChatFriend.username) {
+                    displayMessage(messageData.from, messageData.text);
+                } else {
+                    // אם הצ'אט לא פתוח - הצג התראה
+                    showMessageNotification(messageData.from);
+                }
             }
         }
 
@@ -1207,11 +1228,48 @@
             currentChatFriend = friend;
             document.getElementById('chatTitle').textContent = `צ'אט עם ${friend.username}`;
             
-            // Clear chat messages
-            document.getElementById('chatMessages').innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">התחל שיחה עם החבר שלך!</div>';
+            // טען הודעות קיימות מ-Firebase
+            loadChatWithFriend(friend.username);
             
             closeModal('friendsModal');
             document.getElementById('chatPanel').style.display = 'flex';
+        }
+
+        function loadChatWithFriend(friendName) {
+            const chatMessagesDiv = document.getElementById('chatMessages');
+            chatMessagesDiv.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">טוען הודעות...</div>';
+            
+            if (isFirebaseConnected && database) {
+                // טען הודעות מ-Firebase
+                const chatQuery = database.ref('chats').orderByChild('timestamp').limitToLast(50);
+                
+                chatQuery.once('value', (snapshot) => {
+                    const messages = [];
+                    snapshot.forEach((childSnapshot) => {
+                        const msg = childSnapshot.val();
+                        // הצג רק הודעות בין המשתמש הנוכחי לחבר
+                        if ((msg.from === currentPlayer.username && msg.to === friendName) ||
+                            (msg.from === friendName && msg.to === currentPlayer.username)) {
+                            messages.push(msg);
+                        }
+                    });
+                    
+                    // מיין לפי זמן
+                    messages.sort((a, b) => a.timestamp - b.timestamp);
+                    
+                    // הצג הודעות
+                    chatMessagesDiv.innerHTML = '';
+                    if (messages.length === 0) {
+                        chatMessagesDiv.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">התחל שיחה עם החבר שלך!</div>';
+                    } else {
+                        messages.forEach(msg => {
+                            displayMessage(msg.from, msg.text);
+                        });
+                    }
+                });
+            } else {
+                chatMessagesDiv.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">התחל שיחה עם החבר שלך!</div>';
+            }
         }
 
         function closeChatPanel() {
@@ -1349,7 +1407,7 @@
             }, 2000);
         };
 
-        // Placeholder functions for game features (Trivia, Obstacles, etc.)
+        // Additional functions
         function openSettings() {
             closeModal('phoneModal');
             alert('הגדרות - בפיתוח');
@@ -1388,6 +1446,44 @@
         }
 
         let currentFriendRequestKey = null; // לשמירת מפתח הבקשה הנוכחית
+        let currentMessageSender = null; // לשמירת שם השולח של ההודעה
+
+        function showMessageNotification(senderName) {
+            // בדיקה שהשולח הוא חבר
+            const isFriend = friends.some(friend => friend.username === senderName);
+            if (!isFriend) return;
+            
+            currentMessageSender = senderName;
+            
+            document.getElementById('messageSender').textContent = senderName;
+            document.getElementById('messageNotification').style.display = 'block';
+            
+            // הסתרה אוטומטית אחרי 15 שניות
+            setTimeout(() => {
+                if (document.getElementById('messageNotification').style.display === 'block') {
+                    dismissMessageNotification();
+                }
+            }, 15000);
+        }
+
+        function openChatFromNotification() {
+            if (!currentMessageSender) return;
+            
+            // מצא את החבר ברשימה
+            const friend = friends.find(f => f.username === currentMessageSender);
+            if (friend) {
+                // סגור את ההתראה
+                dismissMessageNotification();
+                
+                // פתח את הצ'אט
+                openChatWithFriend(friend);
+            }
+        }
+
+        function dismissMessageNotification() {
+            document.getElementById('messageNotification').style.display = 'none';
+            currentMessageSender = null;
+        }
 
         function showFriendRequestPopup(requestData, requestKey) {
             currentFriendRequestKey = requestKey;
