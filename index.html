@@ -461,12 +461,36 @@
             right: 50%;
             transform: translate(50%, -50%);
             background: white;
-            padding: 20px;
+            padding: 25px;
             border-radius: 15px;
             border: 3px solid #4CAF50;
             text-align: center;
             z-index: 2001;
             display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translate(50%, -70%);
+                opacity: 0;
+            }
+            to {
+                transform: translate(50%, -50%);
+                opacity: 1;
+            }
+        }
+
+        .friend-request h3 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .friend-request p {
+            margin-bottom: 20px;
+            color: #666;
         }
 
         .friend-request-buttons {
@@ -502,12 +526,13 @@
         
         <!-- הוראות Firebase -->
         <div class="firebase-config">
-            <h3>⚙️ הגדרת חיבור</h3>
-            <p>כדי שהמשחק יעבוד בין מחשבים שונים, עליך להגדיר Firebase:</p>
-            <p>1. היכנס ל-console.firebase.google.com</p>
-            <p>2. צור פרויקט חדש</p>
-            <p>3. הוסף Realtime Database</p>
-            <p>4. העתק את הקונפיגורציה והחלף אותה בקוד</p>
+            <h3>⚙️ הגדרת חיבור רב-משתתפים</h3>
+            <p><strong>כרגע המשחק עובד במצב מקומי (מחשב אחד בלבד)</strong></p>
+            <p>כדי שהמשחק יעבוד בין מחשבים שונים:</p>
+            <p>1. היכנס ל-console.firebase.google.com וצור פרויקט חדש</p>
+            <p>2. הוסף Realtime Database (במצב test)</p>
+            <p>3. העתק את הקונפיגורציה והחלף בקוד JavaScript</p>
+            <p>4. שמור ופתח את הקובץ בכמה מחשבים - תראה שחקנים מחשבים אחרים!</p>
         </div>
         
         <div id="accountsList"></div>
@@ -653,8 +678,7 @@
     </div>
 
     <script>
-        // Firebase Configuration - החלף עם הקונפיגורציה שלך!
-        const firebaseConfig = {
+       const firebaseConfig = {
             apiKey: "AIzaSyBZKyN8w32w1pn4hf28Fv9LecsTDgjZRTs",
             authDomain: "my-login-system-d583d.firebaseapp.com",
             databaseURL: "https://my-login-system-d583d-default-rtdb.europe-west1.firebasedatabase.app",
@@ -669,15 +693,15 @@
         let database;
         let isFirebaseConnected = false;
 
-        try {
-            firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
-            isFirebaseConnected = true;
-            console.log('Firebase connected successfully');
-        } catch (error) {
-            console.warn('Firebase connection failed:', error);
-            isFirebaseConnected = false;
-        }
+            try {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                isFirebaseConnected = true;
+                console.log('Firebase connected successfully');
+            } catch (error) {
+                console.warn('Firebase connection failed:', error);
+                isFirebaseConnected = false;
+            }
 
         // Game Variables
         let selectedColor = '#FF6B6B';
@@ -695,8 +719,13 @@
         // Connection status
         function updateConnectionStatus() {
             const statusElement = document.getElementById('connectionStatus');
-            if (isFirebaseConnected) {
-                statusElement.textContent = 'מחובר';
+            if (!statusElement) return; // אם האלמנט לא קיים עדיין
+            
+            if (isFirebaseConnected && currentPlayer) {
+                statusElement.textContent = 'מחובר לשרת';
+                statusElement.className = 'connection-status connected';
+            } else if (currentPlayer) {
+                statusElement.textContent = 'מחובר מקומית';
                 statusElement.className = 'connection-status connected';
             } else {
                 statusElement.textContent = 'מנותק';
@@ -736,6 +765,26 @@
             chatRef = database.ref('chats');
             chatRef.on('child_added', (snapshot) => {
                 handleIncomingMessage(snapshot.val());
+            });
+
+            // Friend requests listener - מאזין לבקשות חברות
+            const friendRequestsRef = database.ref('friendRequests');
+            friendRequestsRef.on('child_added', (snapshot) => {
+                const requestData = snapshot.val();
+                // אם הבקשה מיועדת לי ואני לא השולח
+                if (requestData.to === currentPlayer.username && requestData.from !== currentPlayer.username) {
+                    showFriendRequestPopup(requestData, snapshot.key);
+                }
+            });
+
+            // Friend responses listener - מאזין לתגובות על בקשות חברות
+            const friendResponsesRef = database.ref('friendResponses');
+            friendResponsesRef.on('child_added', (snapshot) => {
+                const responseData = snapshot.val();
+                // אם התגובה מיועדת לי
+                if (responseData.to === currentPlayer.username) {
+                    handleFriendResponse(responseData, snapshot.key);
+                }
             });
         }
 
@@ -864,7 +913,12 @@
         function showCreateForm() {
             hideAllForms();
             document.getElementById('createForm').classList.add('active');
-        }        
+        }
+
+        function showLoginForm() {
+            hideAllForms();
+            document.getElementById('loginForm').classList.add('active');
+        }
 
         function hideAllForms() {
             document.getElementById('createForm').classList.remove('active');
@@ -976,6 +1030,9 @@
             // Remove player from Firebase
             removePlayerFromFirebase();
             
+            // Reset current player
+            currentPlayer = null;
+            
             document.getElementById('gameArea').style.display = 'none';
             document.getElementById('mainScreen').style.display = 'block';
             
@@ -987,6 +1044,9 @@
             
             // סגירת צ'אט
             closeChatPanel();
+            
+            // עדכון סטטוס חיבור
+            updateConnectionStatus();
             
             loadAccounts();
         }
@@ -1023,6 +1083,12 @@
         }
 
         function sendFriendRequest(player) {
+            // בדיקה שהשחקן לא כבר חבר
+            if (friends.some(friend => friend.username === player.username)) {
+                alert('השחקן כבר חבר שלך!');
+                return;
+            }
+            
             if (isFirebaseConnected && database) {
                 // Send via Firebase - use timestamp without dots
                 const requestId = Date.now() + '_' + Math.floor(Math.random() * 10000);
@@ -1035,9 +1101,11 @@
                 };
                 
                 database.ref(`friendRequests/${requestId}`).set(requestData);
+                alert(`נשלחה בקשת חברות ל${player.username} 📤`);
+            } else {
+                // אם אין Firebase, הצג הודעה מתאימה
+                alert('חיבור Firebase לא זמין - בקשת חברות לא נשלחה');
             }
-            
-            alert(`נשלחה בקשת חברות ל${player.username}`);
         }
 
         function openWardrobe() {
@@ -1292,12 +1360,111 @@
             alert('משחקים - בפיתוח');
         }
 
+        function handleFriendResponse(responseData, responseKey) {
+            if (responseData.accepted) {
+                // הבקשה אושרה - הוסף את החבר לרשימה
+                const newFriend = {
+                    username: responseData.from,
+                    status: 'online',
+                    color: responseData.responderColor || '#4CAF50'
+                };
+                
+                // בדיקה שהחבר לא קיים כבר
+                if (!friends.some(friend => friend.username === responseData.from)) {
+                    friends.push(newFriend);
+                    saveCurrentAccount();
+                }
+                
+                alert(`🎉 ${responseData.from} אישר את בקשת החברות שלך!`);
+            } else {
+                // הבקשה נדחתה
+                alert(`😔 ${responseData.from} דחה את בקשת החברות שלך`);
+            }
+            
+            // מחיקת התגובה אחרי שטופלה
+            if (isFirebaseConnected && database) {
+                database.ref(`friendResponses/${responseKey}`).remove();
+            }
+        }
+
+        let currentFriendRequestKey = null; // לשמירת מפתח הבקשה הנוכחית
+
+        function showFriendRequestPopup(requestData, requestKey) {
+            currentFriendRequestKey = requestKey;
+            
+            document.getElementById('friendRequestSender').textContent = requestData.from;
+            document.getElementById('friendRequest').style.display = 'block';
+            
+            // הסתרה אוטומטית אחרי 30 שניות
+            setTimeout(() => {
+                if (document.getElementById('friendRequest').style.display === 'block') {
+                    declineFriendRequest();
+                }
+            }, 30000);
+        }
+
         function acceptFriendRequest() {
-            alert('קבלת בקשת חברות - בפיתוח');
+            if (!currentFriendRequestKey) return;
+            
+            const senderName = document.getElementById('friendRequestSender').textContent;
+            
+            // הוספת החבר לרשימה המקומית
+            const newFriend = {
+                username: senderName,
+                status: 'online',
+                color: '#4CAF50' // צבע ברירת מחדל
+            };
+            
+            // בדיקה שהחבר לא קיים כבר
+            if (!friends.some(friend => friend.username === senderName)) {
+                friends.push(newFriend);
+                saveCurrentAccount();
+            }
+            
+            // שליחת אישור חזרה דרך Firebase
+            if (isFirebaseConnected && database) {
+                const responseData = {
+                    from: currentPlayer.username,
+                    to: senderName,
+                    accepted: true,
+                    timestamp: Date.now(),
+                    responderColor: currentPlayer.color
+                };
+                
+                database.ref(`friendResponses/${Date.now()}_${Math.floor(Math.random() * 10000)}`).set(responseData);
+                
+                // מחיקת הבקשה המקורית
+                database.ref(`friendRequests/${currentFriendRequestKey}`).remove();
+            }
+            
+            document.getElementById('friendRequest').style.display = 'none';
+            currentFriendRequestKey = null;
+            
+            alert(`${senderName} נוסף לרשימת החברים!`);
         }
 
         function declineFriendRequest() {
-            alert('דחיית בקשת חברות - בפיתוח');
+            if (!currentFriendRequestKey) return;
+            
+            const senderName = document.getElementById('friendRequestSender').textContent;
+            
+            // שליחת דחייה דרך Firebase
+            if (isFirebaseConnected && database) {
+                const responseData = {
+                    from: currentPlayer.username,
+                    to: senderName,
+                    accepted: false,
+                    timestamp: Date.now()
+                };
+                
+                database.ref(`friendResponses/${Date.now()}_${Math.floor(Math.random() * 10000)}`).set(responseData);
+                
+                // מחיקת הבקשה המקורית
+                database.ref(`friendRequests/${currentFriendRequestKey}`).remove();
+            }
+            
+            document.getElementById('friendRequest').style.display = 'none';
+            currentFriendRequestKey = null;
         }
     </script>
 </body>
